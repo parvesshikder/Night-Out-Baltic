@@ -1,12 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppChrome from "@/components/radar/AppChrome";
 import CityCanvas from "@/components/radar/CityCanvas";
 import CommandBar from "@/components/radar/CommandBar";
 import SignalBoard from "@/components/radar/SignalBoard";
 import VenueDossier from "@/components/radar/VenueDossier";
-import { contribute, getEvents, getHeatmap, getVenues } from "@/lib/api";
+import {
+  contribute,
+  getEvents as getLiveEvents,
+  getHeatmap as getLiveHeatmap,
+  getVenues as getLiveVenues,
+} from "@/lib/api";
 import type {
   ContributionAction,
   CrowdVibe,
@@ -15,6 +20,13 @@ import type {
   TimeFrame,
   Venue,
 } from "@/lib/api";
+import {
+  type DemoLedger,
+  getDemoEvents,
+  getDemoHeatmap,
+  getDemoVenues,
+  recordDemoContribution,
+} from "@/lib/demo-data";
 import {
   areaMoodFromPercent,
   cityMoodFromPercent,
@@ -27,17 +39,25 @@ type UserLocation = {
   accuracy?: number;
 };
 
+const initialVenues = getDemoVenues({ timeframe: "now" });
+const initialEvents = getDemoEvents({ timeframe: "now" });
+const initialHeatPoints = getDemoHeatmap("now");
+
 export default function Home() {
   const [timeframe, setTimeframe] = useState<TimeFrame>("now");
   const [query, setQuery] = useState("");
   const [vibe, setVibe] = useState<"all" | CrowdVibe>("all");
   const [area, setArea] = useState("all");
-  const [venues, setVenues] = useState<Venue[]>([]);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [suggestionVenues, setSuggestionVenues] = useState<Venue[]>([]);
-  const [suggestionEvents, setSuggestionEvents] = useState<EventItem[]>([]);
-  const [heatPoints, setHeatPoints] = useState<HeatPoint[]>([]);
-  const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>();
+  const [venues, setVenues] = useState<Venue[]>(initialVenues);
+  const [events, setEvents] = useState<EventItem[]>(initialEvents);
+  const [suggestionVenues, setSuggestionVenues] =
+    useState<Venue[]>(initialVenues);
+  const [suggestionEvents, setSuggestionEvents] =
+    useState<EventItem[]>(initialEvents);
+  const [heatPoints, setHeatPoints] = useState<HeatPoint[]>(initialHeatPoints);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(
+    initialVenues[0]?.id,
+  );
   const [popupVenueId, setPopupVenueId] = useState<string | undefined>();
   const [showHeat, setShowHeat] = useState(true);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -46,13 +66,34 @@ export default function Home() {
   >("idle");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const demoLedgerRef = useRef<DemoLedger>({});
 
   const refresh = useCallback(async () => {
-    const [nextVenues, nextEvents, nextHeat] = await Promise.all([
-      getVenues({ timeframe, query, vibe, area }),
-      getEvents({ timeframe, query }),
-      getHeatmap(timeframe),
-    ]);
+    let nextVenues: Venue[];
+    let nextEvents: EventItem[];
+    let nextHeat: HeatPoint[];
+
+    try {
+      [nextVenues, nextEvents, nextHeat] = await Promise.all([
+        getLiveVenues({ timeframe, query, vibe, area }),
+        getLiveEvents({ timeframe, query }),
+        getLiveHeatmap(timeframe),
+      ]);
+      if (
+        nextVenues.length === 0 &&
+        nextEvents.length === 0 &&
+        nextHeat.length === 0
+      ) {
+        throw new Error("empty live dataset");
+      }
+    } catch {
+      nextVenues = getDemoVenues(
+        { timeframe, query, vibe, area },
+        demoLedgerRef.current,
+      );
+      nextEvents = getDemoEvents({ timeframe, query });
+      nextHeat = getDemoHeatmap(timeframe, demoLedgerRef.current);
+    }
 
     setVenues(nextVenues);
     setEvents(nextEvents);
@@ -78,25 +119,35 @@ export default function Home() {
   }, [area, popupVenueId, query, selectedVenueId, timeframe, vibe]);
 
   useEffect(() => {
-    refresh().catch(() => setToast("Could not sync live signals."));
+    refresh();
   }, [refresh]);
 
   useEffect(() => {
     async function loadSuggestionPool() {
-      const [nextVenues, nextEvents] = await Promise.all([
-        getVenues({ timeframe }),
-        getEvents({ timeframe }),
-      ]);
-      setSuggestionVenues(nextVenues);
-      setSuggestionEvents(nextEvents);
+      try {
+        const [nextVenues, nextEvents] = await Promise.all([
+          getLiveVenues({ timeframe }),
+          getLiveEvents({ timeframe }),
+        ]);
+        if (nextVenues.length === 0 && nextEvents.length === 0) {
+          throw new Error("empty suggestion dataset");
+        }
+        setSuggestionVenues(nextVenues);
+        setSuggestionEvents(nextEvents);
+      } catch {
+        setSuggestionVenues(
+          getDemoVenues({ timeframe }, demoLedgerRef.current),
+        );
+        setSuggestionEvents(getDemoEvents({ timeframe }));
+      }
     }
 
-    loadSuggestionPool().catch(() => setToast("Search suggestions could not sync."));
+    loadSuggestionPool();
   }, [timeframe]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      refresh().catch(() => setToast("Live signal refresh failed."));
+      refresh();
     }, 7000);
     return () => window.clearInterval(id);
   }, [refresh]);
@@ -232,10 +283,40 @@ export default function Home() {
       );
       setSelectedVenueId(response.venue.id);
       setPopupVenueId(options.keepPopup === false ? undefined : response.venue.id);
-      setHeatPoints(await getHeatmap(timeframe));
+      setHeatPoints(await getLiveHeatmap(timeframe));
       setToast(response.message);
     } catch {
-      setToast("Contribution could not be saved.");
+      recordDemoContribution(
+        demoLedgerRef.current,
+        targetVenueId,
+        action,
+        vibeReport,
+      );
+
+      const nextVenues = getDemoVenues(
+        { timeframe, query, vibe, area },
+        demoLedgerRef.current,
+      );
+      const fullDemoVenues = getDemoVenues(
+        { timeframe },
+        demoLedgerRef.current,
+      );
+      const updatedVenue = fullDemoVenues.find(
+        (venue) => venue.id === targetVenueId,
+      );
+
+      setVenues(nextVenues);
+      setSuggestionVenues(fullDemoVenues);
+      setEvents(getDemoEvents({ timeframe, query }));
+      setSuggestionEvents(getDemoEvents({ timeframe }));
+      setHeatPoints(getDemoHeatmap(timeframe, demoLedgerRef.current));
+      setSelectedVenueId(updatedVenue?.id ?? targetVenueId);
+      setPopupVenueId(options.keepPopup === false ? undefined : targetVenueId);
+      setToast(
+        action === "not_going"
+          ? "Skipped. The Tartu signal stayed unchanged."
+          : "Tartu demo signal updated.",
+      );
     } finally {
       setBusyAction(null);
     }

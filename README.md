@@ -16,6 +16,7 @@ The app uses a real OpenStreetMap/Leaflet map centered on Tartu, then overlays s
 - Time frames: now, tonight, late, weekend
 - Search by venue, area, music, tag, or event
 - Venue detail panel with qualitative crowd level, estimated entry feel, events, tags, and area vibe
+- Built-in Tartu demo fallback so the UI still has map markers, heat, events, and search if the live API is unavailable
 - Anonymous user actions:
   - `Going` adds one planned person
   - `Check in` adds a stronger live signal

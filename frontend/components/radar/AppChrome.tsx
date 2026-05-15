@@ -1,4 +1,4 @@
-import { Radio, Sparkles } from "lucide-react";
+import { Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,8 +14,13 @@ export default function AppChrome() {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/88 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-[1800px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:px-6 md:flex-nowrap md:py-0">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-950">
-            <Sparkles aria-hidden="true" size={18} />
+          <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-cyan-300/30 bg-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
+            <img
+              src="/icon-192.png"
+              alt=""
+              aria-hidden="true"
+              className="h-full w-full object-cover"
+            />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold tracking-tight text-white">
