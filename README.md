@@ -4,6 +4,11 @@ Tartu nightlife MVP with a Go backend and a React/Next.js frontend.
 
 The app uses a real OpenStreetMap/Leaflet map centered on Tartu, then overlays seeded venue data, live-style crowd simulation, heatmap intensity, event search, and anonymous user contributions.
 
+## Live App
+
+- Frontend: https://nightoutbaltic.netlify.app/
+- Backend: deployed separately on Render and configured through `NEXT_PUBLIC_API_URL`
+
 ## What It Does
 
 - Real Tartu map with clickable nightlife markers
@@ -12,11 +17,39 @@ The app uses a real OpenStreetMap/Leaflet map centered on Tartu, then overlays s
 - Search by venue, area, music, tag, or event
 - Venue detail panel with qualitative crowd level, estimated entry feel, events, tags, and area vibe
 - Anonymous user actions:
-  - `I am going` adds one planned person
+  - `Going` adds one planned person
   - `Check in` adds a stronger live signal
   - `Not going` intentionally does not affect crowd
   - vibe reports update the displayed venue vibe
 - Go API with in-memory dummy data, no database needed
+
+## Deployment
+
+Recommended free deployment split:
+
+- Frontend: Netlify
+- Backend: Render
+
+Netlify uses the root `netlify.toml` file:
+
+```toml
+[build]
+base = "frontend"
+command = "npm run build"
+publish = ".next"
+```
+
+Set this environment variable in Netlify:
+
+```txt
+NEXT_PUBLIC_API_URL=https://your-render-backend-url.onrender.com
+```
+
+The Go backend reads Render's `PORT` environment variable and exposes health at:
+
+```txt
+GET /health
+```
 
 ## Run With Docker
 
