@@ -121,7 +121,7 @@ function VenueTrayCard({
           <span className="block truncate text-sm font-semibold text-white">
             {venue.name}
           </span>
-          <span className="mt-0.5 inline-flex max-w-full rounded-full border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+          <span className="mt-0.5 inline-flex h-5 max-w-full items-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-slate-400">
             <span className="truncate">{signal.level}</span>
           </span>
         </span>

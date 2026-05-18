@@ -14,30 +14,41 @@ export default function RadarChips({
   hottestArea,
   venueCount,
 }: RadarChipsProps) {
+  const items = [
+    {
+      icon: <Radio size={12} />,
+      label: "Now",
+      value: cityMood,
+      tone: "cyan" as const,
+      delay: 0,
+    },
+    {
+      icon: <Flame size={12} />,
+      label: "Hot",
+      value: hottestArea,
+      tone: "amber" as const,
+      delay: 0.05,
+    },
+    {
+      icon: <MapPinned size={12} />,
+      label: "Live",
+      value: venueCount ? `${venueCount}` : "...",
+      tone: "neutral" as const,
+      delay: 0.1,
+    },
+  ];
+
   return (
-    <div className="pointer-events-none absolute bottom-32 left-3 z-[400] flex flex-col gap-1.5 lg:bottom-auto lg:left-[calc(380px+1rem)] lg:top-20 lg:flex-row">
-      <RadarChip
-        icon={<Radio size={13} />}
-        label="City"
-        value={cityMood}
-        tone="cyan"
-        delay={0}
-      />
-      <RadarChip
-        icon={<Flame size={13} />}
-        label="Warmest"
-        value={hottestArea}
-        tone="amber"
-        delay={0.06}
-      />
-      <RadarChip
-        icon={<MapPinned size={13} />}
-        label="Venues"
-        value={venueCount ? `${venueCount}` : "Sync"}
-        tone="neutral"
-        delay={0.12}
-      />
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+      className="pointer-events-none fixed bottom-[118px] left-3 right-3 z-30 grid grid-cols-3 overflow-hidden rounded-lg border border-white/10 bg-[#090916]/86 shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl sm:left-auto sm:w-[21rem] lg:absolute lg:bottom-auto lg:left-[calc(380px+1rem)] lg:right-auto lg:top-20 lg:w-[22rem]"
+    >
+      {items.map((item) => (
+        <RadarChip key={item.label} {...item} />
+      ))}
+    </motion.div>
   );
 }
 
@@ -60,37 +71,38 @@ function RadarChip({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, type: "spring", stiffness: 420, damping: 32 }}
       className={cn(
-        "flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-[#090916]/88 px-2.5 text-[11px] font-semibold text-white shadow-lg shadow-black/25 backdrop-blur-xl lg:px-3 lg:text-xs",
-        tone === "cyan" && "border-l-2 border-l-cyan-400/60",
-        tone === "amber" && "border-l-2 border-l-amber-400/60",
-        tone === "neutral" && "border-l-2 border-l-slate-500/60",
+        "min-w-0 border-r border-white/[0.07] px-2 py-1.5 last:border-r-0",
       )}
     >
-      <span
-        className={cn(
-          "shrink-0",
-          tone === "cyan" && "text-cyan-300",
-          tone === "amber" && "text-amber-300",
-          tone === "neutral" && "text-slate-400",
-        )}
-      >
-        {icon}
-      </span>
-      <span className="hidden text-[10px] font-bold uppercase tracking-widest text-slate-500 lg:inline">
-        {label}
-      </span>
-      <AnimatePresence mode="popLayout">
-        <motion.span
-          key={value}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.18 }}
-          className="max-w-32 truncate font-mono tabular-nums"
+      <div className="flex min-w-0 items-center gap-2">
+        <span
+          className={cn(
+            "grid h-6 w-6 shrink-0 place-items-center rounded-md border",
+            tone === "cyan" && "border-cyan-300/20 bg-cyan-400/10 text-cyan-200",
+            tone === "amber" && "border-amber-300/20 bg-amber-400/10 text-amber-200",
+            tone === "neutral" && "border-slate-300/15 bg-white/[0.045] text-slate-300",
+          )}
         >
-          {value}
-        </motion.span>
-      </AnimatePresence>
+          {icon}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[8px] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {label}
+          </span>
+          <AnimatePresence mode="popLayout">
+            <motion.span
+              key={value}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18 }}
+              className="block truncate text-[10px] font-semibold leading-4 text-white"
+            >
+              {value}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      </div>
     </motion.div>
   );
 }

@@ -690,7 +690,7 @@ function SuggestionItem({
           {suggestion.meta}
         </span>
       </span>
-      <span className="rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+      <span className="inline-flex h-5 shrink-0 items-center justify-center rounded-full border border-white/10 px-2 text-[10px] font-medium uppercase leading-none tracking-[0.12em] text-slate-400">
         {isEvent ? suggestion.badge : "Venue"}
       </span>
     </button>
