@@ -49,14 +49,14 @@ export default function VenueTray({
     <section
       aria-label="Live venues"
       className={cn(
-        "pointer-events-none fixed bottom-0 left-0 right-0 z-40 pb-safe",
-        "lg:bottom-4 lg:left-4 lg:pb-0",
+        "pointer-events-none fixed bottom-0 left-0 right-0 z-40",
+        "lg:left-4",
         panelOpen ? "lg:right-[416px]" : "lg:right-4",
       )}
     >
-      <div className="pointer-events-auto bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/80 to-transparent pt-8 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-[#0d0d1a]/72 lg:bg-none lg:pt-3 lg:shadow-[0_18px_54px_rgba(0,0,0,0.45)] lg:backdrop-blur-2xl">
+      <div className="venue-tray-panel pointer-events-auto bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/80 to-transparent pt-6 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-[#0d0d1a]/72 lg:bg-none lg:pt-2 lg:shadow-[0_18px_54px_rgba(0,0,0,0.45)] lg:backdrop-blur-2xl">
         <div
-          className="scrollbar-none flex gap-2 overflow-x-auto px-3 pb-3 lg:px-3"
+          className="scrollbar-none flex gap-2 overflow-x-auto px-3 pt-1 lg:px-3"
           style={{ scrollSnapType: "x mandatory" }}
         >
           {venues.map((venue, index) => (
@@ -97,13 +97,13 @@ function VenueTrayCard({
       ref={cardRef}
       type="button"
       initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0, y: selected ? -4 : 0 }}
-      whileHover={{ scale: 1.02, y: selected ? -5 : -2 }}
+      animate={{ opacity: 1, x: 0 }}
+      whileHover={{ scale: 1.015 }}
       whileTap={{ scale: 0.96 }}
       transition={{ delay: index * 0.04, type: "spring", stiffness: 420, damping: 34 }}
       onClick={onSelect}
       className={cn(
-        "relative h-[96px] w-[180px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d1a]/94 p-2.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70",
+        "relative flex h-[112px] w-[190px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d1a]/94 p-2.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70",
         selected &&
           "border-cyan-300/40 shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_8px_32px_rgba(0,0,0,0.6)]",
       )}
@@ -163,7 +163,7 @@ function VenueTrayCard({
         className="mt-2"
       />
 
-      <div className="mt-1.5 flex items-center justify-between gap-2 text-[11px]">
+      <div className="mt-auto flex items-center justify-between gap-2 pt-1.5 text-[11px]">
         <span className="min-w-0 truncate text-slate-500">{venue.area}</span>
         <span className="shrink-0 font-mono font-semibold tabular-nums text-slate-400">
           {signal.wait}

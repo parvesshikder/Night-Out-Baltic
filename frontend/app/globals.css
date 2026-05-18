@@ -120,6 +120,10 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .venue-tray-panel {
+    padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
+  }
+
   .badge-glow {
     box-shadow: none;
   }
