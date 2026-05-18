@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import {
   CalendarDays,
   HandHeart,
@@ -35,7 +36,12 @@ export default function AppChrome({
   onNavigate,
 }: AppChromeProps) {
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur-xl">
+    <motion.header
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur-xl"
+    >
       <div className="mx-auto flex h-full max-w-[var(--content-max)] items-center justify-between gap-2 px-3 lg:px-6">
         <a
           href="#radar"
@@ -46,14 +52,24 @@ export default function AppChrome({
           }}
           className="flex min-w-0 items-center gap-2"
         >
-          <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-cyan-300/30 bg-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
+          <motion.span
+            animate={{
+              boxShadow: [
+                "0 0 14px rgba(34,211,238,0.16)",
+                "0 0 26px rgba(34,211,238,0.34)",
+                "0 0 14px rgba(34,211,238,0.16)",
+              ],
+            }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-cyan-300/30 bg-slate-950"
+          >
             <img
               src="/icon-192.png"
               alt=""
               aria-hidden="true"
               className="h-full w-full object-cover"
             />
-          </span>
+          </motion.span>
           <div className="min-w-0">
             <p className="font-display truncate text-sm font-bold text-white lg:text-base tracking-tight">
               Night Out Baltic
@@ -79,8 +95,8 @@ export default function AppChrome({
                 size="sm"
                 className={
                   activeTarget === item.target
-                    ? "shrink-0 rounded-lg bg-white/10 text-white"
-                    : "shrink-0"
+                    ? "relative shrink-0 overflow-hidden rounded-lg bg-white/10 text-white"
+                    : "relative shrink-0 overflow-hidden"
                 }
               >
                 <a
@@ -93,8 +109,15 @@ export default function AppChrome({
                     onNavigate(item.target);
                   }}
                 >
+                  {activeTarget === item.target && (
+                    <motion.span
+                      layoutId="app-chrome-active"
+                      className="absolute inset-0 rounded-lg bg-cyan-300/10"
+                      transition={{ type: "spring", stiffness: 460, damping: 34 }}
+                    />
+                  )}
                   <Icon aria-hidden="true" size={16} />
-                  <span className="hidden md:inline">{item.label}</span>
+                  <span className="relative hidden md:inline">{item.label}</span>
                 </a>
               </Button>
             );
@@ -102,13 +125,18 @@ export default function AppChrome({
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
-          <Badge variant="emerald" glow className="gap-1.5">
-            <LiveDot colour="emerald" size="sm" />
-            <Radio aria-hidden="true" size={12} className="hidden sm:block" />
-            Live
-          </Badge>
+          <motion.div
+            animate={{ y: [0, -1, 0] }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Badge variant="emerald" glow className="gap-1.5">
+              <LiveDot colour="emerald" size="sm" />
+              <Radio aria-hidden="true" size={12} className="hidden sm:block" />
+              Live
+            </Badge>
+          </motion.div>
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

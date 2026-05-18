@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 import {
@@ -93,21 +93,49 @@ function VenueTrayCard({
 
   return (
     <motion.button
+      layout
       ref={cardRef}
       type="button"
       initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      whileHover={{ scale: 1.01 }}
+      animate={{ opacity: 1, x: 0, y: selected ? -4 : 0 }}
+      whileHover={{ scale: 1.02, y: selected ? -5 : -2 }}
       whileTap={{ scale: 0.96 }}
       transition={{ delay: index * 0.04, type: "spring", stiffness: 420, damping: 34 }}
       onClick={onSelect}
       className={cn(
-        "h-[96px] w-[180px] shrink-0 snap-start rounded-xl border border-white/[0.08] bg-[#0d0d1a]/94 p-2.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70",
+        "relative h-[96px] w-[180px] shrink-0 snap-start overflow-hidden rounded-xl border border-white/[0.08] bg-[#0d0d1a]/94 p-2.5 text-left shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70",
         selected &&
           "border-cyan-300/40 shadow-[0_0_0_1px_rgba(34,211,238,0.4),0_8px_32px_rgba(0,0,0,0.6)]",
       )}
       aria-pressed={selected}
     >
+      <AnimatePresence>
+        {selected && (
+          <>
+            <motion.span
+              aria-hidden="true"
+              initial={{ opacity: 0 }}
+              animate={{
+                opacity: [0.28, 0.5, 0.28],
+                boxShadow: [
+                  "inset 0 0 0 1px rgba(34,211,238,0.25)",
+                  "inset 0 0 0 1px rgba(34,211,238,0.55)",
+                  "inset 0 0 0 1px rgba(34,211,238,0.25)",
+                ],
+              }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+              className="pointer-events-none absolute inset-0 rounded-xl"
+            />
+            <motion.span
+              aria-hidden="true"
+              layoutId="venue-tray-selected-line"
+              className="pointer-events-none absolute left-3 right-3 top-0 h-px bg-cyan-300/70"
+              transition={{ type: "spring", stiffness: 480, damping: 36 }}
+            />
+          </>
+        )}
+      </AnimatePresence>
       <div className="flex min-w-0 items-start gap-2">
         <span
           className={cn(
@@ -122,6 +150,7 @@ function VenueTrayCard({
             {venue.name}
           </span>
           <span className="mt-0.5 inline-flex h-5 max-w-full items-center rounded-full border border-white/10 bg-white/[0.04] px-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.12em] text-slate-400">
+            {selected && <LiveDot colour="cyan" size="sm" className="mr-1" />}
             <span className="truncate">{signal.level}</span>
           </span>
         </span>
