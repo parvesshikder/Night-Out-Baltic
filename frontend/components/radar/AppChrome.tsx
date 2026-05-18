@@ -1,20 +1,52 @@
-import { Radio } from "lucide-react";
+"use client";
+
+import {
+  CalendarDays,
+  HandHeart,
+  MapPinned,
+  Radio,
+  Signal,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LiveDot } from "@/components/ui/live-dot";
+
+export type AppChromeTarget = "radar" | "venues" | "events" | "contribute";
 
 const navItems = [
-  { label: "Radar", href: "#radar" },
-  { label: "Venues", href: "#venues" },
-  { label: "Events", href: "#events" },
-  { label: "Contribute", href: "#contribute" },
-];
+  { label: "Radar", target: "radar", icon: Signal },
+  { label: "Venues", target: "venues", icon: MapPinned },
+  { label: "Events", target: "events", icon: CalendarDays },
+  { label: "Contribute", target: "contribute", icon: HandHeart },
+] satisfies Array<{
+  label: string;
+  target: AppChromeTarget;
+  icon: LucideIcon;
+}>;
 
-export default function AppChrome() {
+type AppChromeProps = {
+  activeTarget?: AppChromeTarget;
+  onNavigate?: (target: AppChromeTarget) => void;
+};
+
+export default function AppChrome({
+  activeTarget = "radar",
+  onNavigate,
+}: AppChromeProps) {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/88 backdrop-blur-xl">
-      <div className="mx-auto flex min-h-16 max-w-[1800px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:px-6 md:flex-nowrap md:py-0">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-cyan-300/30 bg-slate-950 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
+    <header className="fixed left-0 right-0 top-0 z-50 h-11 border-b border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur-xl lg:h-14">
+      <div className="mx-auto flex h-full max-w-[var(--content-max)] items-center justify-between gap-2 px-3 lg:px-6">
+        <a
+          href="#radar"
+          onClick={(event) => {
+            if (!onNavigate) return;
+            event.preventDefault();
+            onNavigate("radar");
+          }}
+          className="flex min-w-0 items-center gap-2"
+        >
+          <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-cyan-300/30 bg-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)]">
             <img
               src="/icon-192.png"
               alt=""
@@ -23,33 +55,56 @@ export default function AppChrome() {
             />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight text-white">
+            <p className="font-display truncate text-sm font-bold text-white lg:text-base tracking-tight">
               Night Out Baltic
             </p>
-            <p className="hidden text-xs text-slate-500 sm:block">Tartu nightlife radar</p>
+            <p className="hidden truncate text-[11px] font-medium text-slate-500 lg:block">
+              Tartu nightlife radar
+            </p>
           </div>
-        </div>
+        </a>
 
         <nav
           aria-label="Primary navigation"
-          className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto md:order-none md:mx-0 md:w-auto"
+          className="hidden min-w-0 flex-1 items-center justify-end gap-1 lg:flex lg:flex-none"
         >
-          {navItems.map((item) => (
-            <Button
-              key={item.href}
-              asChild
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-            >
-              <a href={item.href}>{item.label}</a>
-            </Button>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <Button
+                key={item.target}
+                asChild
+                variant="ghost"
+                size="sm"
+                className={
+                  activeTarget === item.target
+                    ? "shrink-0 rounded-lg bg-white/10 text-white"
+                    : "shrink-0"
+                }
+              >
+                <a
+                  href={`#${item.target}`}
+                  aria-label={item.label}
+                  title={item.label}
+                  onClick={(event) => {
+                    if (!onNavigate) return;
+                    event.preventDefault();
+                    onNavigate(item.target);
+                  }}
+                >
+                  <Icon aria-hidden="true" size={16} />
+                  <span className="hidden md:inline">{item.label}</span>
+                </a>
+              </Button>
+            );
+          })}
         </nav>
 
-        <div className="flex items-center gap-2">
-          <Badge variant="emerald" className="hidden sm:inline-flex">
-            <Radio aria-hidden="true" size={12} />
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="emerald" glow className="gap-1.5">
+            <LiveDot colour="emerald" size="sm" />
+            <Radio aria-hidden="true" size={12} className="hidden sm:block" />
             Live
           </Badge>
         </div>

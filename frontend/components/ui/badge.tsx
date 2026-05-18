@@ -13,9 +13,14 @@ const badgeVariants = cva(
         amber: "bg-amber-400/10 text-amber-100 ring-amber-300/20",
         rose: "bg-rose-400/10 text-rose-100 ring-rose-300/20",
       },
+      glow: {
+        true: "badge-glow",
+        false: "",
+      },
     },
     defaultVariants: {
       variant: "neutral",
+      glow: false,
     },
   },
 );
@@ -23,6 +28,11 @@ const badgeVariants = cva(
 type BadgeProps = HTMLAttributes<HTMLSpanElement> &
   VariantProps<typeof badgeVariants>;
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+export function Badge({ className, variant, glow, ...props }: BadgeProps) {
+  return (
+    <span
+      className={cn(badgeVariants({ variant, glow }), className)}
+      {...props}
+    />
+  );
 }

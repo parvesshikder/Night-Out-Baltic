@@ -372,9 +372,9 @@ func parseTimeFrame(value string) TimeFrame {
 }
 
 func matchesVenue(venue VenueState, query string) bool {
-	haystack := strings.ToLower(venue.Name + " " + venue.Kind + " " + venue.Area + " " + venue.Address + " " + strings.Join(venue.Tags, " ") + " " + strings.Join(venue.Music, " "))
+	haystack := strings.ToLower(venue.Name + " " + venue.Kind + " " + venue.Area + " " + venue.Address + " " + venue.Price + " " + venue.Description + " " + strings.Join(venue.Tags, " ") + " " + strings.Join(venue.Music, " "))
 	for _, event := range venue.Events {
-		haystack += " " + strings.ToLower(event.Title+" "+strings.Join(event.Tags, " "))
+		haystack += " " + strings.ToLower(event.Title+" "+event.Description+" "+event.Price+" "+strings.Join(event.Tags, " "))
 	}
 	return strings.Contains(haystack, query)
 }

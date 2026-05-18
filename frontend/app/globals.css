@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  --color-bg: #0d0d1a;
+  --color-surface: #13132a;
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-pulse: #22d3ee;
+  --color-night-base: #04060f;
+  --color-night-surface: #090d1a;
+  --color-night-elevated: #0f1525;
+  --color-night-border: rgba(255, 255, 255, 0.08);
+  --color-pulse-dim: rgba(34, 211, 238, 0.15);
+  --color-pulse-glow: rgba(34, 211, 238, 0.35);
+  --color-vibe-dead: #64748b;
+  --color-vibe-chill: #38bdf8;
+  --color-vibe-perfect: #34d399;
+  --color-vibe-busy: #fbbf24;
+  --color-vibe-packed: #fb7185;
+  --page-x: clamp(1rem, 4vw, 1.5rem);
+  --content-max: 1800px;
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
+  --font-display: var(--font-plus-jakarta), "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
@@ -12,18 +30,20 @@
 
   html {
     min-height: 100%;
-    background: #f8fafc;
+    background: #0d0d1a;
+    scroll-behavior: smooth;
   }
 
   body {
     min-height: 100%;
     margin: 0;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.92)),
-      radial-gradient(circle at top left, rgba(15, 23, 42, 0.06), transparent 32rem);
-    color: #020617;
+    overflow: hidden;
+    background: #0d0d1a;
+    color: #e2e8f0;
     font-family: var(--font-sans);
+    font-feature-settings: "cv11", "tnum";
     letter-spacing: 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   button,
@@ -39,41 +59,124 @@
   button:disabled {
     cursor: not-allowed;
   }
+
+  :focus-visible {
+    outline: 2px solid var(--color-pulse);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .glass {
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(13, 13, 26, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-light {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-low {
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(8px);
+  }
+
+  .glass-mid {
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.045);
+    backdrop-filter: blur(14px);
+  }
+
+  .glass-high {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+  }
+
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bottom-safe {
+    bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .badge-glow {
+    box-shadow: none;
+  }
+
+  @media (min-width: 640px) {
+    .badge-glow {
+      box-shadow: 0 0 12px color-mix(in srgb, currentColor 40%, transparent);
+    }
+  }
+
+  .bg-clip-text {
+    -webkit-background-clip: text;
+  }
+
   .leaflet-container {
     width: 100%;
     height: 100%;
-    background: #eef2f7;
+    background: #1a1a2e;
     font-family: var(--font-sans);
+    filter: contrast(1.06) brightness(1.08) saturate(0.9);
   }
 
   .leaflet-control-zoom {
     overflow: hidden;
-    border: 1px solid rgba(203, 213, 225, 0.9) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 14px !important;
+    background: rgba(9, 9, 22, 0.88) !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
+    backdrop-filter: blur(16px);
   }
 
   .leaflet-control-zoom a {
-    width: 36px !important;
-    height: 36px !important;
+    width: 40px !important;
+    height: 40px !important;
     border: 0 !important;
-    color: #0f172a !important;
-    line-height: 36px !important;
+    color: #cbd5e1 !important;
+    background: transparent !important;
+    line-height: 40px !important;
+  }
+
+  .leaflet-control-zoom a:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
   }
 
   .leaflet-tooltip {
-    border: 1px solid rgba(203, 213, 225, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     border-radius: 8px !important;
-    color: #0f172a !important;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14) !important;
+    color: #e2e8f0 !important;
+    background: rgba(15, 23, 42, 0.92) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35) !important;
     font-size: 12px;
     font-weight: 600;
+    backdrop-filter: blur(16px);
   }
 
-  .venue-marker-shell {
+  .vmap-shell {
     background: transparent;
     border: 0;
   }
@@ -141,145 +244,195 @@
     transform: translateX(-50%);
   }
 
-  .venue-marker {
+  .vmap {
     position: relative;
-    display: grid;
-    width: 70px;
-    height: 76px;
-    place-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 60px;
+    height: 72px;
     border: 0;
     background: transparent;
+    cursor: pointer;
     transform: translateZ(0);
-    transition:
-      filter 180ms ease,
-      transform 180ms ease;
+    transition: transform 180ms ease, filter 180ms ease;
   }
 
-  .venue-marker:hover,
-  .venue-marker:focus-visible {
-    filter: brightness(1.08);
-  }
-
-  .venue-marker:focus-visible {
-    outline: 2px solid rgba(103, 232, 249, 0.9);
+  .vmap:hover  { transform: scale(1.12) translateZ(0); }
+  .vmap:focus-visible {
+    outline: 2px solid rgba(34,211,238,0.9);
     outline-offset: 4px;
+    border-radius: 999px;
   }
 
-  .venue-marker__halo,
-  .venue-marker__pin,
-  .venue-marker__label {
+  /* Outer pulse ring — animates continuously */
+  .vmap__pulse {
     position: absolute;
-  }
-
-  .venue-marker__halo {
+    top: 50%;
+    left: 50%;
     width: 54px;
     height: 54px;
     border-radius: 999px;
-    opacity: 0.2;
-    animation: marker-pulse 2.4s infinite ease-out;
+    background: var(--mc);
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+    animation: vmap-pulse 2.2s ease-out infinite;
   }
 
-  .venue-marker__pin {
-    display: grid;
+  /* Static aura ring — always visible, no animation */
+  .vmap__aura {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     width: 40px;
     height: 40px;
-    place-items: center;
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 14px 14px 14px 5px;
-    box-shadow:
-      0 12px 30px rgba(15, 23, 42, 0.22),
-      inset 0 -6px 10px rgba(15, 23, 42, 0.18);
-    transform: rotate(-45deg);
+    border-radius: 999px;
+    background: var(--mc);
+    opacity: 0.22;
+    transform: translate(-50%, -50%);
+    filter: blur(6px);
   }
 
-  .venue-marker__glyph {
+  /* Core circle — the main clickable orb */
+  .vmap__core {
+    position: relative;
+    z-index: 1;
     display: grid;
     place-items: center;
-    color: #fff;
-    transform: rotate(45deg);
-  }
-
-  .venue-marker__glyph svg {
-    width: 19px;
-    height: 19px;
-    fill: none;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2;
-  }
-
-  .venue-marker__label {
-    bottom: 1px;
-    left: 50%;
-    max-width: 64px;
-    overflow: hidden;
-    padding: 0 7px;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
+    background: var(--mc-grad);
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,0.25),
+      0 0 16px var(--mc-glow),
+      0 4px 12px rgba(0,0,0,0.5);
+    margin-top: 12px; /* pushes core below the pulse ring center */
+  }
+
+  /* Crowd percentage number inside the core */
+  .vmap__pct {
+    font-size: 9px;
+    font-weight: 800;
     color: #fff;
-    background: rgba(15, 23, 42, 0.9);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
-    line-height: 21px;
-    font-size: 11px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  /* Venue name pill — hidden by default, shown on selected */
+  .vmap__name {
+    position: relative;
+    z-index: 1;
+    max-width: 72px;
+    overflow: hidden;
+    padding: 2px 7px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    background: rgba(9,9,22,0.90);
+    color: #fff;
+    font-size: 10px;
     font-weight: 700;
     text-overflow: ellipsis;
-    transform: translateX(-50%);
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 180ms ease, transform 180ms ease;
   }
 
-  .venue-marker--dead .venue-marker__halo,
-  .venue-marker--dead .venue-marker__pin {
-    background: #94a3b8;
+  /* Selected state — bigger, brighter, name visible */
+  .vmap--selected {
+    width: 76px;
+    height: 88px;
   }
 
-  .venue-marker--chill .venue-marker__halo,
-  .venue-marker--chill .venue-marker__pin {
-    background: #0ea5e9;
+  .vmap--selected .vmap__core {
+    width: 38px;
+    height: 38px;
+    box-shadow:
+      0 0 0 3px rgba(255,255,255,0.35),
+      0 0 28px var(--mc-glow),
+      0 0 48px var(--mc-glow),
+      0 6px 20px rgba(0,0,0,0.6);
   }
 
-  .venue-marker--perfect .venue-marker__halo,
-  .venue-marker--perfect .venue-marker__pin {
-    background: #10b981;
+  .vmap--selected .vmap__pct {
+    font-size: 11px;
   }
 
-  .venue-marker--busy .venue-marker__halo,
-  .venue-marker--busy .venue-marker__pin {
-    background: #f59e0b;
+  .vmap--selected .vmap__aura {
+    width: 52px;
+    height: 52px;
+    opacity: 0.30;
   }
 
-  .venue-marker--packed .venue-marker__halo,
-  .venue-marker--packed .venue-marker__pin {
-    background: #f43f5e;
+  .vmap--selected .vmap__pulse {
+    width: 68px;
+    height: 68px;
+    animation-duration: 1.6s;
   }
 
-  .venue-marker--selected {
-    width: 88px;
-    height: 92px;
-    z-index: 2;
+  .vmap--selected .vmap__name {
+    opacity: 1;
+    transform: translateY(0);
   }
 
-  .venue-marker--selected .venue-marker__halo {
-    width: 70px;
-    height: 70px;
-    opacity: 0.26;
+  /* ─── Vibe colour variables ─── */
+
+  .vmap--dead {
+    --mc: #6b7280;
+    --mc-grad: linear-gradient(135deg, #9ca3af, #4b5563);
+    --mc-glow: rgba(107,114,128,0.45);
+  }
+  .vmap--dead .vmap__pulse { animation: none; opacity: 0; }
+
+  .vmap--chill {
+    --mc: #0ea5e9;
+    --mc-grad: linear-gradient(135deg, #38bdf8, #0369a1);
+    --mc-glow: rgba(14,165,233,0.55);
   }
 
-  .venue-marker--selected .venue-marker__pin {
-    width: 48px;
-    height: 48px;
-    border-width: 2px;
+  .vmap--perfect {
+    --mc: #10b981;
+    --mc-grad: linear-gradient(135deg, #34d399, #059669);
+    --mc-glow: rgba(16,185,129,0.55);
   }
 
-  .venue-marker--selected .venue-marker__glyph svg {
-    width: 22px;
-    height: 22px;
+  .vmap--busy {
+    --mc: #f59e0b;
+    --mc-grad: linear-gradient(135deg, #fbbf24, #d97706);
+    --mc-glow: rgba(245,158,11,0.60);
+  }
+  .vmap--busy .vmap__pulse { animation-duration: 1.8s; }
+
+  .vmap--packed {
+    --mc: #f43f5e;
+    --mc-grad: linear-gradient(135deg, #fb7185, #be123c);
+    --mc-glow: rgba(244,63,94,0.65);
+  }
+  .vmap--packed .vmap__pulse { animation-duration: 1.4s; }
+  .vmap--packed .vmap__aura { opacity: 0.32; }
+
+  /* ─── Keyframes ─── */
+
+  @keyframes vmap-pulse {
+    0%   { transform: translate(-50%,-50%) scale(0.55); opacity: 0.55; }
+    70%  { transform: translate(-50%,-50%) scale(1.45); opacity: 0; }
+    100% { transform: translate(-50%,-50%) scale(1.45); opacity: 0; }
   }
 
-  .venue-marker--selected .venue-marker__label {
-    bottom: 2px;
-    max-width: 76px;
-    line-height: 23px;
+  /* ─── Mobile: slightly smaller markers ─── */
+  @media (max-width: 639px) {
+    .vmap          { width: 48px; height: 60px; }
+    .vmap__core    { width: 24px; height: 24px; margin-top: 10px; }
+    .vmap__pct     { font-size: 8px; }
+    .vmap__pulse   { width: 42px; height: 42px; }
+    .vmap__aura    { width: 32px; height: 32px; }
+    .vmap__name    { font-size: 9px; max-width: 60px; }
+    .vmap--selected .vmap__core { width: 30px; height: 30px; }
+    .vmap--selected .vmap__pulse { width: 52px; height: 52px; }
   }
 
   @keyframes marker-pulse {
@@ -294,8 +447,25 @@
     }
   }
 
+  @keyframes live-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.35;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .venue-marker__halo,
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+    }
+
+    .vmap__pulse,
     .user-location-marker__ring {
       animation: none;
     }
