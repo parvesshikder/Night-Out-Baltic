@@ -1,11 +1,15 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AppChrome from "@/components/radar/AppChrome";
-import CityCanvas from "@/components/radar/CityCanvas";
-import CommandBar from "@/components/radar/CommandBar";
-import SignalBoard from "@/components/radar/SignalBoard";
-import VenueDossier from "@/components/radar/VenueDossier";
+import type { AppChromeTarget } from "@/components/radar/AppChrome";
+import MapCanvas from "@/components/radar/MapCanvas";
+import RadarChips from "@/components/radar/RadarChips";
+import SearchOverlay from "@/components/radar/SearchOverlay";
+import VenueDetailPanel from "@/components/radar/VenueDetailPanel";
+import VenueTray from "@/components/radar/VenueTray";
 import {
   contribute,
   getEvents as getLiveEvents,
@@ -58,7 +62,10 @@ export default function Home() {
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(
     initialVenues[0]?.id,
   );
-  const [popupVenueId, setPopupVenueId] = useState<string | undefined>();
+  const selectedVenueIdRef = useRef(selectedVenueId);
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  const [chromeTarget, setChromeTarget] = useState<AppChromeTarget>("radar");
+  const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
   const [showHeat, setShowHeat] = useState(true);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<
@@ -67,6 +74,10 @@ export default function Home() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const demoLedgerRef = useRef<DemoLedger>({});
+
+  useEffect(() => {
+    selectedVenueIdRef.current = selectedVenueId;
+  }, [selectedVenueId]);
 
   const refresh = useCallback(async () => {
     let nextVenues: Venue[];
@@ -99,28 +110,31 @@ export default function Home() {
     setEvents(nextEvents);
     setHeatPoints(nextHeat);
 
-    if (!selectedVenueId && nextVenues.length > 0) {
+    const currentSelectedVenueId = selectedVenueIdRef.current;
+
+    if (!currentSelectedVenueId && nextVenues.length > 0) {
       setSelectedVenueId(nextVenues[0].id);
     }
 
     if (
-      selectedVenueId &&
-      !nextVenues.some((venue) => venue.id === selectedVenueId)
+      currentSelectedVenueId &&
+      !nextVenues.some((venue) => venue.id === currentSelectedVenueId)
     ) {
       setSelectedVenueId(nextVenues[0]?.id);
     }
 
-    if (
-      popupVenueId &&
-      !nextVenues.some((venue) => venue.id === popupVenueId)
-    ) {
-      setPopupVenueId(undefined);
-    }
-  }, [area, popupVenueId, query, selectedVenueId, timeframe, vibe]);
+  }, [area, query, timeframe, vibe]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setDetailPanelOpen(true);
+      setChromeTarget("venues");
+    }
+  }, []);
 
   useEffect(() => {
     async function loadSuggestionPool() {
@@ -264,7 +278,6 @@ export default function Home() {
     action: ContributionAction,
     vibeReport?: CrowdVibe,
     venueId?: string,
-    options: { keepPopup?: boolean } = {},
   ) {
     const targetVenueId = venueId ?? selectedVenue?.id;
     if (!targetVenueId) return;
@@ -282,7 +295,6 @@ export default function Home() {
         ),
       );
       setSelectedVenueId(response.venue.id);
-      setPopupVenueId(options.keepPopup === false ? undefined : response.venue.id);
       setHeatPoints(await getLiveHeatmap(timeframe));
       setToast(response.message);
     } catch {
@@ -311,7 +323,6 @@ export default function Home() {
       setSuggestionEvents(getDemoEvents({ timeframe }));
       setHeatPoints(getDemoHeatmap(timeframe, demoLedgerRef.current));
       setSelectedVenueId(updatedVenue?.id ?? targetVenueId);
-      setPopupVenueId(options.keepPopup === false ? undefined : targetVenueId);
       setToast(
         action === "not_going"
           ? "Skipped. The Tartu signal stayed unchanged."
@@ -324,13 +335,17 @@ export default function Home() {
 
   function selectVenue(venue: Venue) {
     setSelectedVenueId(venue.id);
-    setPopupVenueId(venue.id);
+    setDetailPanelOpen(true);
+    setChromeTarget("venues");
+    setActiveEvent(null);
   }
 
   function selectVenueSuggestion(venue: Venue) {
     setQuery(venue.name);
     setSelectedVenueId(venue.id);
-    setPopupVenueId(venue.id);
+    setDetailPanelOpen(true);
+    setChromeTarget("venues");
+    setActiveEvent(null);
     setArea("all");
     setVibe("all");
   }
@@ -341,7 +356,9 @@ export default function Home() {
     setArea("all");
     setVibe("all");
     setSelectedVenueId(event.venueId);
-    setPopupVenueId(event.venueId);
+    setDetailPanelOpen(true);
+    setChromeTarget("events");
+    setActiveEvent(event);
   }
 
   function resetFilters() {
@@ -351,78 +368,127 @@ export default function Home() {
     setArea("all");
   }
 
+  function scrollToPanelSection(target: Exclude<AppChromeTarget, "radar">) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.getElementById(target)?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+    });
+  }
+
+  function handleChromeNavigate(target: AppChromeTarget) {
+    setChromeTarget(target);
+
+    if (target === "radar") {
+      setDetailPanelOpen(false);
+      document.getElementById("radar")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+
+    if (!selectedVenueId && venues[0]) {
+      setSelectedVenueId(venues[0].id);
+    }
+
+    setDetailPanelOpen(true);
+    scrollToPanelSection(target);
+  }
+
   const hasActiveFilters =
     query.trim() !== "" || timeframe !== "now" || vibe !== "all" || area !== "all";
 
   return (
-    <main className="min-h-dvh bg-slate-950 text-slate-100">
-      <AppChrome />
+    <main
+      id="radar"
+      className="relative h-dvh w-screen overflow-hidden bg-[#0d0d1a] text-slate-100"
+    >
+      <AppChrome activeTarget={chromeTarget} onNavigate={handleChromeNavigate} />
 
-      <div className="mx-auto grid max-w-[1800px] gap-4 px-4 py-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <section id="radar" className="grid min-w-0 scroll-mt-20 gap-4">
-          <CommandBar
-            query={query}
-            onQueryChange={setQuery}
-            venues={suggestionVenues.length ? suggestionVenues : venues}
-            events={suggestionEvents.length ? suggestionEvents : events}
-            onVenueSuggestion={selectVenueSuggestion}
-            onEventSuggestion={selectEventSuggestion}
-            timeframe={timeframe}
-            onTimeframeChange={setTimeframe}
-            vibe={vibe}
-            onVibeChange={setVibe}
-            area={area}
-            onAreaChange={setArea}
-            showHeat={showHeat}
-            onShowHeatChange={() => setShowHeat((value) => !value)}
-            hasActiveFilters={hasActiveFilters}
-            onResetFilters={resetFilters}
-          />
+      <MapCanvas
+        venues={venues}
+        heatPoints={heatPoints}
+        selectedVenueId={selectedVenueId}
+        userLocation={userLocation}
+        locationStatus={locationStatus}
+        showHeat={showHeat}
+        onRequestLocation={requestUserLocation}
+        onSelectVenue={selectVenue}
+      />
 
-          <CityCanvas
-            cityMood={cityPulse.cityMood}
-            hottestArea={cityPulse.hottestArea}
-            venues={venues}
-            heatPoints={heatPoints}
-            selectedVenueId={selectedVenueId}
-            popupVenueId={popupVenueId}
-            userLocation={userLocation}
-            locationStatus={locationStatus}
-            showHeat={showHeat}
-            onRequestLocation={requestUserLocation}
-            onSelectVenue={selectVenue}
-            onCloseVenuePopup={() => setPopupVenueId(undefined)}
-            busyAction={busyAction}
-            onContribution={(venue, action, vibeReport, options) =>
-              handleContribution(action, vibeReport, venue.id, options)
-            }
-          />
+      <SearchOverlay
+        query={query}
+        onQueryChange={setQuery}
+        venues={suggestionVenues.length ? suggestionVenues : venues}
+        events={suggestionEvents.length ? suggestionEvents : events}
+        onVenueSuggestion={selectVenueSuggestion}
+        onEventSuggestion={selectEventSuggestion}
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
+        vibe={vibe}
+        onVibeChange={setVibe}
+        area={area}
+        onAreaChange={setArea}
+        showHeat={showHeat}
+        onShowHeatChange={() => setShowHeat((value) => !value)}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+      />
 
-          <SignalBoard
-            venues={venues}
-            selectedVenueId={selectedVenueId}
-            onSelectVenue={selectVenue}
-          />
-        </section>
+      <RadarChips
+        cityMood={cityPulse.cityMood}
+        hottestArea={cityPulse.hottestArea}
+        venueCount={venues.length}
+      />
 
-        <VenueDossier
-          venue={selectedVenue}
-          events={events}
-          areaInsight={areaInsight}
-          busyAction={busyAction}
-          onContribution={handleContribution}
-          onSelectEvent={selectEventSuggestion}
-        />
-      </div>
+      <VenueTray
+        venues={venues}
+        selectedVenueId={selectedVenueId}
+        cityMood={cityPulse.cityMood}
+        panelOpen={detailPanelOpen}
+        onSelectVenue={selectVenue}
+      />
 
-      {toast && (
-        <div
-          role="status"
-          className="fixed bottom-4 right-4 z-[1000] max-w-[calc(100vw-2rem)] rounded-lg border border-white/10 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-100 shadow-2xl shadow-black/40"
-        >
-          {toast}
-        </div>
-      )}
+      <VenueDetailPanel
+        isOpen={detailPanelOpen}
+        venue={selectedVenue}
+        activeEvent={activeEvent}
+        venues={venues}
+        selectedVenueId={selectedVenueId}
+        events={events}
+        areaInsight={areaInsight}
+        busyAction={busyAction}
+        onClose={() => {
+          setDetailPanelOpen(false);
+          setChromeTarget("radar");
+        }}
+        onContribution={(action, vibeReport) =>
+          handleContribution(action, vibeReport)
+        }
+        onSelectEvent={selectEventSuggestion}
+        onSelectVenue={selectVenue}
+      />
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            role="status"
+            aria-atomic="true"
+            initial={{ opacity: 0, y: 16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 500, damping: 40 }}
+            className="fixed bottom-20 left-4 right-4 z-[100] mx-auto flex max-w-md items-start gap-3 rounded-xl border border-white/10 bg-slate-900/95 px-4 py-3 text-sm font-medium text-slate-100 shadow-2xl shadow-black/40 backdrop-blur-xl"
+          >
+            <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-emerald-300" size={16} />
+            <span>{toast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
