@@ -317,6 +317,39 @@ function userLocationHTML() {
   `;
 }
 
+function mapUiPadding(isMobile: boolean) {
+  return isMobile
+    ? {
+        topLeft: [32, 120] as [number, number],
+        bottomRight: [32, 190] as [number, number],
+      }
+    : {
+        topLeft: [32, 96] as [number, number],
+        bottomRight: [420, 136] as [number, number],
+      };
+}
+
+function venueFocusPoint(venue: Venue, isMobile: boolean): [number, number] {
+  return [venue.lat - (isMobile ? 0.0012 : 0), venue.lng];
+}
+
+function isPointInUsableMapArea(
+  map: LeafletMap,
+  point: [number, number],
+  isMobile: boolean,
+) {
+  const padding = mapUiPadding(isMobile);
+  const size = map.getSize();
+  const pixel = map.latLngToContainerPoint(point);
+
+  return (
+    pixel.x >= padding.topLeft[0] &&
+    pixel.x <= size.x - padding.bottomRight[0] &&
+    pixel.y >= padding.topLeft[1] &&
+    pixel.y <= size.y - padding.bottomRight[1]
+  );
+}
+
 export default function MapView({
   venues,
   heatPoints,
@@ -336,11 +369,28 @@ export default function MapView({
   const onSelectRef = useRef(onSelectVenue);
   const selectedVenueIdRef = useRef(selectedVenueId);
   const routeRequestRef = useRef(0);
+  const userExploringMapRef = useRef(false);
+  const programmaticMapMoveRef = useRef(false);
+  const programmaticMapMoveTimerRef = useRef<number | null>(null);
+  const mobileClusterFrameKeyRef = useRef<string | null>(null);
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
 
   const [mapReady, setMapReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [routeSummary, setRouteSummary] = useState<RouteSummary | null>(null);
+
+  function runProgrammaticMapMove(change: () => void, timeout = 900) {
+    if (programmaticMapMoveTimerRef.current) {
+      window.clearTimeout(programmaticMapMoveTimerRef.current);
+    }
+
+    programmaticMapMoveRef.current = true;
+    change();
+    programmaticMapMoveTimerRef.current = window.setTimeout(() => {
+      programmaticMapMoveRef.current = false;
+      programmaticMapMoveTimerRef.current = null;
+    }, timeout);
+  }
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -375,6 +425,14 @@ export default function MapView({
       });
 
       L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      const markUserExploring = () => {
+        if (!programmaticMapMoveRef.current) {
+          userExploringMapRef.current = true;
+        }
+      };
+
+      map.on("dragstart zoomstart", markUserExploring);
 
       const labelPane = map.createPane("mapLabels");
       labelPane.style.zIndex = "350";
@@ -418,6 +476,14 @@ export default function MapView({
       setMapReady(false);
       mapRef.current?.remove();
       mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (programmaticMapMoveTimerRef.current) {
+        window.clearTimeout(programmaticMapMoveTimerRef.current);
+      }
     };
   }, []);
 
@@ -543,7 +609,13 @@ export default function MapView({
 
     async function frameMobileVenueCluster() {
       const map = mapRef.current;
-      if (!mapReady || !isMobile || !map || venues.length === 0) {
+      if (
+        !mapReady ||
+        !isMobile ||
+        !map ||
+        venues.length === 0 ||
+        userExploringMapRef.current
+      ) {
         return;
       }
 
@@ -553,11 +625,20 @@ export default function MapView({
       }
 
       const cluster = dominantVenueCluster(venues);
+      const clusterKey = cluster.map((venue) => venue.id).join("|");
+
+      if (mobileClusterFrameKeyRef.current === clusterKey) {
+        return;
+      }
+
+      mobileClusterFrameKeyRef.current = clusterKey;
 
       if (cluster.length === 1) {
-        map.setView([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
-          animate: true,
-        });
+        runProgrammaticMapMove(() => {
+          map.setView([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
+            animate: true,
+          });
+        }, 650);
         return;
       }
 
@@ -565,13 +646,15 @@ export default function MapView({
         cluster.map((venue) => [venue.lat, venue.lng] as [number, number]),
       );
 
-      map.fitBounds(bounds, {
-        animate: true,
-        duration: 0.45,
-        maxZoom: 15,
-        paddingTopLeft: [44, 120],
-        paddingBottomRight: [44, 190],
-      });
+      runProgrammaticMapMove(() => {
+        map.fitBounds(bounds, {
+          animate: true,
+          duration: 0.45,
+          maxZoom: 15,
+          paddingTopLeft: [44, 120],
+          paddingBottomRight: [44, 190],
+        });
+      }, 650);
     }
 
     frameMobileVenueCluster();
@@ -585,17 +668,21 @@ export default function MapView({
     const selectedChanged = selectedVenueIdRef.current !== selectedVenueId;
     selectedVenueIdRef.current = selectedVenueId;
     const selected = venues.find((venue) => venue.id === selectedVenueId);
-    if (mapReady && selected && mapRef.current) {
-      if (isMobile && !selectedChanged) {
+    if (mapReady && selectedChanged && selected && mapRef.current) {
+      if (isPointInUsableMapArea(
+        mapRef.current,
+        [selected.lat, selected.lng],
+        isMobile,
+      )) {
         return;
       }
 
-      // Offset latitude on mobile so the marker is visible above the bottom panel
-      const latOffset = isMobile ? 0.003 : 0;
-      mapRef.current.flyTo([selected.lat - latOffset, selected.lng], 16, {
-        animate: true,
-        duration: 0.65,
-      });
+      runProgrammaticMapMove(() => {
+        mapRef.current?.panTo(venueFocusPoint(selected, isMobile), {
+          animate: true,
+          duration: 0.45,
+        });
+      }, 650);
     }
   }, [selectedVenueId, venues, isMobile, mapReady]);
 
@@ -757,14 +844,6 @@ export default function MapView({
               .openOn(map);
           });
 
-        map.fitBounds(roadRoute.path, {
-          animate: true,
-          duration: 0.55,
-          maxZoom: 16,
-          paddingTopLeft: isMobile ? [44, 132] : [92, 92],
-          paddingBottomRight: isMobile ? [44, 220] : [360, 132],
-        });
-
         setRouteSummary({
           status: "ready",
           label: routeDistanceLabel,
@@ -798,20 +877,27 @@ export default function MapView({
   useEffect(() => {
     if (mapReady && pendingLocateRef.current && userLocation && mapRef.current) {
       pendingLocateRef.current = false;
-      mapRef.current.flyTo([userLocation.lat, userLocation.lng], 16, {
-        animate: true,
-        duration: 0.65,
-      });
+      userExploringMapRef.current = false;
+      runProgrammaticMapMove(() => {
+        mapRef.current?.flyTo([userLocation.lat, userLocation.lng], 16, {
+          animate: true,
+          duration: 0.65,
+        });
+      }, 900);
     }
   }, [userLocation, mapReady]);
 
   function findMe() {
+    userExploringMapRef.current = false;
+
     if (userLocation && mapRef.current) {
       const latOffset = isMobile ? 0.003 : 0;
-      mapRef.current.flyTo([userLocation.lat - latOffset, userLocation.lng], 16, {
-        animate: true,
-        duration: 0.65,
-      });
+      runProgrammaticMapMove(() => {
+        mapRef.current?.flyTo([userLocation.lat - latOffset, userLocation.lng], 16, {
+          animate: true,
+          duration: 0.65,
+        });
+      }, 900);
       return;
     }
 
@@ -820,35 +906,44 @@ export default function MapView({
   }
 
   function resetMapView() {
+    userExploringMapRef.current = false;
+    mobileClusterFrameKeyRef.current = null;
+
     if (isMobile && venues.length > 0) {
       const cluster = dominantVenueCluster(venues);
 
       if (cluster.length === 1) {
-        mapRef.current?.flyTo([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
-          animate: true,
-          duration: 0.55,
-        });
+        runProgrammaticMapMove(() => {
+          mapRef.current?.flyTo([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
+            animate: true,
+            duration: 0.55,
+          });
+        }, 800);
         return;
       }
 
-      mapRef.current?.fitBounds(
-        cluster.map((venue) => [venue.lat, venue.lng] as [number, number]),
-        {
-          animate: true,
-          duration: 0.55,
-          maxZoom: 15,
-          paddingTopLeft: [44, 120],
-          paddingBottomRight: [44, 190],
-        },
-      );
+      runProgrammaticMapMove(() => {
+        mapRef.current?.fitBounds(
+          cluster.map((venue) => [venue.lat, venue.lng] as [number, number]),
+          {
+            animate: true,
+            duration: 0.55,
+            maxZoom: 15,
+            paddingTopLeft: [44, 120],
+            paddingBottomRight: [44, 190],
+          },
+        );
+      }, 800);
       return;
     }
 
     const latOffset = isMobile ? 0.003 : 0;
-    mapRef.current?.flyTo([TARTU_CENTER[0] - latOffset, TARTU_CENTER[1]], 14, {
-      animate: true,
-      duration: 0.55,
-    });
+    runProgrammaticMapMove(() => {
+      mapRef.current?.flyTo([TARTU_CENTER[0] - latOffset, TARTU_CENTER[1]], 14, {
+        animate: true,
+        duration: 0.55,
+      });
+    }, 800);
   }
 
   return (
