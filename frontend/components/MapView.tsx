@@ -588,14 +588,7 @@ export default function MapView({
           <RotateCcw aria-hidden="true" size={16} />
         </MapControlButton>
       </div>
-      <div className="pointer-events-none absolute bottom-4 left-4 z-[500] hidden max-w-64 rounded-xl border border-white/10 bg-slate-950/80 px-4 py-3 shadow-xl shadow-black/25 backdrop-blur-xl sm:block">
-        <strong className="block text-sm font-semibold text-white">
-          Tartu live vibe
-        </strong>
-        <span className="mt-0.5 block text-xs text-slate-400">
-          {locationStatusCopy(locationStatus)}
-        </span>
-      </div>
+      <MapLegend />
     </div>
   );
 }
@@ -633,9 +626,39 @@ function MapControlButton({
   );
 }
 
-function locationStatusCopy(status: MapViewProps["locationStatus"]) {
-  if (status === "ready") return "Your location is on · vibe-level signals";
-  if (status === "locating") return "Finding your location · vibe-level signals";
-  if (status === "blocked") return "Location off · vibe-level signals";
-  return "Dark map base · vibe-level signals";
+function MapLegend() {
+  const items = [
+    { label: "Chill", color: "bg-sky-400", ring: "ring-sky-300/30" },
+    { label: "Good", color: "bg-emerald-400", ring: "ring-emerald-300/30" },
+    { label: "Busy", color: "bg-amber-400", ring: "ring-amber-300/30" },
+    { label: "Packed", color: "bg-rose-400", ring: "ring-rose-300/30" },
+    { label: "Quiet", color: "bg-slate-500", ring: "ring-slate-300/25" },
+  ];
+
+  return (
+    <div
+      aria-label="Map colour key"
+      className="pointer-events-none absolute left-1 top-1/2 z-[410] flex w-[5.5rem] -translate-y-1/2 flex-col gap-1 rounded-lg border border-white/10 bg-slate-950/78 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.34)] backdrop-blur-xl lg:left-2"
+    >
+      <span className="border-b border-white/10 pb-1 text-center text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">
+        Key
+      </span>
+      {items.map((item) => (
+        <span
+          key={item.label}
+          className="inline-flex min-w-0 items-center gap-1.5 rounded-md px-1 py-0.5 text-[10px] font-semibold text-slate-200"
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-2.5 w-2.5 rounded-full ring-2",
+              item.color,
+              item.ring,
+            )}
+          />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
 }
