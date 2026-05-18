@@ -34,7 +34,7 @@ const markerIcons: Record<VenueMarkerKind, string> = {
   bar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l-5 7-5-7Z"/><path d="M12 11v7"/><path d="M8 20h8"/></svg>',
   pub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h11v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M8 8V5"/><path d="M12 8V5"/></svg>',
   food: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18"/><path d="M4 3v5a3 3 0 0 0 6 0V3"/><path d="M16 3v18"/><path d="M16 3c3 1 4 4 4 7v2h-4"/></svg>',
-  club: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg>',
+  club: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 8v5"/><path d="M8 11l4-3 4 3"/><path d="M12 13l-3 6"/><path d="M12 13l4 5"/><path d="M18 5v7"/><path d="M18 5l3 1v2l-3-1"/></svg>',
   music: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>',
   wine: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3Z"/><path d="M12 12v8"/><path d="M8 21h8"/></svg>',
   cafe: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M6 4h8"/></svg>',
