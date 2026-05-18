@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { RotateCcw, UserRound } from "lucide-react";
-import type { LayerGroup, Map as LeafletMap, Marker } from "leaflet";
+import type {
+  LayerGroup,
+  LeafletMouseEvent,
+  Map as LeafletMap,
+  Marker,
+} from "leaflet";
 import type { HeatPoint, Venue } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +24,37 @@ type MapViewProps = {
 };
 
 const TARTU_CENTER: [number, number] = [58.3776, 26.729];
+const ROAD_ROUTE_API =
+  process.env.NEXT_PUBLIC_ROUTE_API_URL ??
+  "https://router.project-osrm.org/route/v1/driving";
+const EARTH_RADIUS_METERS = 6371000;
+
+type LatLngPoint = {
+  lat: number;
+  lng: number;
+};
+
+type RoadRoute = {
+  distanceMeters: number;
+  path: [number, number][];
+};
+
+type RouteSummary = {
+  status: "loading" | "ready" | "unavailable";
+  label: string;
+  detail: string;
+};
+
+type OsrmRouteResponse = {
+  code?: string;
+  routes?: Array<{
+    distance?: number;
+    geometry?: {
+      coordinates?: [number, number][];
+    };
+  }>;
+};
+
 type VenueMarkerKind =
   | "bar"
   | "pub"
@@ -52,6 +88,119 @@ function heatColor(intensity: number) {
   if (intensity > 0.62) return "#fde68a";
   if (intensity > 0.42) return "#bbf7d0";
   return "#bae6fd";
+}
+
+function formatDistance(meters: number) {
+  const kilometers = meters / 1000;
+
+  return `${kilometers < 1 ? kilometers.toFixed(2) : kilometers.toFixed(1)} km`;
+}
+
+function distanceBetweenPoints(a: [number, number], b: [number, number]) {
+  const latA = (a[0] * Math.PI) / 180;
+  const latB = (b[0] * Math.PI) / 180;
+  const deltaLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const deltaLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const sinLat = Math.sin(deltaLat / 2);
+  const sinLng = Math.sin(deltaLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos(latA) * Math.cos(latB) * sinLng * sinLng;
+
+  return 2 * EARTH_RADIUS_METERS * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function bearingBetweenPoints(a: [number, number], b: [number, number]) {
+  const latA = (a[0] * Math.PI) / 180;
+  const latB = (b[0] * Math.PI) / 180;
+  const deltaLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const y = Math.sin(deltaLng) * Math.cos(latB);
+  const x =
+    Math.cos(latA) * Math.sin(latB) -
+    Math.sin(latA) * Math.cos(latB) * Math.cos(deltaLng);
+
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+function interpolatePoint(
+  a: [number, number],
+  b: [number, number],
+  amount: number,
+): [number, number] {
+  return [
+    a[0] + (b[0] - a[0]) * amount,
+    a[1] + (b[1] - a[1]) * amount,
+  ];
+}
+
+function routeArrows(path: [number, number][]) {
+  if (path.length < 2) {
+    return [];
+  }
+
+  const segments = path.slice(1).map((point, index) => ({
+    start: path[index],
+    end: point,
+    distance: distanceBetweenPoints(path[index], point),
+  }));
+  const routeLength = segments.reduce((total, segment) => total + segment.distance, 0);
+
+  if (routeLength <= 0) {
+    return [];
+  }
+
+  const arrowCount = Math.min(22, Math.max(4, Math.floor(routeLength / 95)));
+
+  return Array.from({ length: arrowCount }, (_, index) => {
+    const targetDistance = ((index + 1) * routeLength) / (arrowCount + 1);
+    let walked = 0;
+
+    for (const segment of segments) {
+      if (walked + segment.distance >= targetDistance) {
+        const progress = (targetDistance - walked) / segment.distance;
+
+        return {
+          position: interpolatePoint(segment.start, segment.end, progress),
+          rotation: bearingBetweenPoints(segment.start, segment.end),
+        };
+      }
+
+      walked += segment.distance;
+    }
+
+    const last = segments[segments.length - 1];
+    return {
+      position: last.end,
+      rotation: bearingBetweenPoints(last.start, last.end),
+    };
+  });
+}
+
+async function fetchRoadRoute(
+  origin: LatLngPoint,
+  destination: LatLngPoint,
+  signal: AbortSignal,
+): Promise<RoadRoute> {
+  const coordinates = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
+  const url = `${ROAD_ROUTE_API}/${coordinates}?overview=full&geometries=geojson&steps=false&alternatives=false`;
+  const response = await fetch(url, { signal });
+
+  if (!response.ok) {
+    throw new Error(`Route request failed with ${response.status}`);
+  }
+
+  const data = (await response.json()) as OsrmRouteResponse;
+  const route = data.routes?.[0];
+  const path = route?.geometry?.coordinates?.map(([lng, lat]) => [lat, lng] as [number, number]);
+
+  if (data.code !== "Ok" || !route?.distance || !path?.length) {
+    throw new Error("No road route found");
+  }
+
+  return {
+    distanceMeters: route.distance,
+    path,
+  };
 }
 
 function escapeHTML(value: string) {
@@ -186,10 +335,12 @@ export default function MapView({
   const pendingLocateRef = useRef(false);
   const onSelectRef = useRef(onSelectVenue);
   const selectedVenueIdRef = useRef(selectedVenueId);
+  const routeRequestRef = useRef(0);
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
 
   const [mapReady, setMapReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [routeSummary, setRouteSummary] = useState<RouteSummary | null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -450,10 +601,15 @@ export default function MapView({
 
   useEffect(() => {
     let cancelled = false;
+    const abortController = new AbortController();
+    const routeRequestId = ++routeRequestRef.current;
 
     async function paintLocation() {
       const map = mapRef.current;
-      if (!mapReady || !map) return;
+      if (!mapReady || !map) {
+        setRouteSummary(null);
+        return;
+      }
 
       const L = await loadLeaflet();
       if (cancelled) return;
@@ -464,7 +620,10 @@ export default function MapView({
         locationLayerRef.current.clearLayers();
       }
 
-      if (!userLocation) return;
+      if (!userLocation) {
+        setRouteSummary(null);
+        return;
+      }
 
       L.circle([userLocation.lat, userLocation.lng], {
         radius: Math.min(Math.max(userLocation.accuracy ?? 28, 24), 90),
@@ -491,21 +650,140 @@ export default function MapView({
           opacity: 0.92,
         });
 
-      if (selectedVenue) {
-        L.polyline(
-          [
-            [userLocation.lat, userLocation.lng],
-            [selectedVenue.lat, selectedVenue.lng],
-          ],
-          {
-            color: "#67e8f9",
-            weight: 2,
-            opacity: 0.62,
-            dashArray: "4 8",
-            lineCap: "round",
+      if (!selectedVenue) {
+        setRouteSummary(null);
+        return;
+      }
+
+      setRouteSummary({
+        status: "loading",
+        label: "Routing",
+        detail: "Finding road",
+      });
+
+      try {
+        const roadRoute = await fetchRoadRoute(
+          userLocation,
+          selectedVenue,
+          abortController.signal,
+        );
+
+        if (cancelled || routeRequestRef.current !== routeRequestId) {
+          return;
+        }
+
+        const routeDistanceLabel = formatDistance(roadRoute.distanceMeters);
+        const routePopupHTML = `
+          <div class="route-popup-card">
+            <span>Road route</span>
+            <strong>${routeDistanceLabel}</strong>
+            <small>to ${escapeHTML(selectedVenue.name)}</small>
+          </div>
+        `;
+
+        L.polyline(roadRoute.path, {
+          color: "#020617",
+          weight: 7,
+          opacity: 0.72,
+          lineCap: "round",
+          lineJoin: "round",
+          interactive: false,
+          className: "route-line route-line--shadow",
+        }).addTo(locationLayerRef.current);
+
+        L.polyline(roadRoute.path, {
+          color: "#22d3ee",
+          weight: 5,
+          opacity: 0.2,
+          lineCap: "round",
+          lineJoin: "round",
+          interactive: false,
+          className: "route-line route-line--glow",
+        }).addTo(locationLayerRef.current);
+
+        L.polyline(roadRoute.path, {
+          color: "#7dd3fc",
+          weight: 2.5,
+          opacity: 0.95,
+          lineCap: "round",
+          lineJoin: "round",
+          interactive: false,
+          className: "route-line route-line--core",
+        }).addTo(locationLayerRef.current);
+
+        for (const arrow of routeArrows(roadRoute.path)) {
+          L.marker(arrow.position, {
+            icon: L.divIcon({
+              html: `
+                <svg class="route-arrow" style="--route-arrow-rotation:${arrow.rotation}deg" viewBox="0 0 20 20" aria-hidden="true">
+                  <path class="route-arrow__case" d="M10 3 16 11h-3v6H7v-6H4l6-8Z" />
+                  <path class="route-arrow__head" d="M10 4.8 14.4 10.7h-2.6v5.1H8.2v-5.1H5.6L10 4.8Z" />
+                </svg>
+              `,
+              className: "route-arrow-shell",
+              iconSize: [18, 18],
+              iconAnchor: [9, 9],
+            }),
             interactive: false,
-          },
-        ).addTo(locationLayerRef.current);
+            keyboard: false,
+            zIndexOffset: 900,
+          }).addTo(locationLayerRef.current);
+        }
+
+        L.polyline(roadRoute.path, {
+          color: "#ffffff",
+          weight: 18,
+          opacity: 0.01,
+          lineCap: "round",
+          lineJoin: "round",
+          interactive: true,
+          className: "route-click-target",
+        })
+          .addTo(locationLayerRef.current)
+          .bindTooltip(`Road route · ${routeDistanceLabel}`, {
+            direction: "top",
+            opacity: 0.96,
+            sticky: true,
+          })
+          .on("click", (event: LeafletMouseEvent) => {
+            L.popup({
+              closeButton: false,
+              className: "route-popup",
+              autoPan: false,
+              offset: [0, -4],
+            })
+              .setLatLng(event.latlng)
+              .setContent(routePopupHTML)
+              .openOn(map);
+          });
+
+        map.fitBounds(roadRoute.path, {
+          animate: true,
+          duration: 0.55,
+          maxZoom: 16,
+          paddingTopLeft: isMobile ? [44, 132] : [92, 92],
+          paddingBottomRight: isMobile ? [44, 220] : [360, 132],
+        });
+
+        setRouteSummary({
+          status: "ready",
+          label: routeDistanceLabel,
+          detail: "Road",
+        });
+      } catch (error) {
+        if (
+          cancelled ||
+          routeRequestRef.current !== routeRequestId ||
+          (error as Error).name === "AbortError"
+        ) {
+          return;
+        }
+
+        setRouteSummary({
+          status: "unavailable",
+          label: "No road route",
+          detail: "Try again",
+        });
       }
     }
 
@@ -513,8 +791,9 @@ export default function MapView({
 
     return () => {
       cancelled = true;
+      abortController.abort();
     };
-  }, [selectedVenue, userLocation, mapReady]);
+  }, [selectedVenue, userLocation, mapReady, isMobile]);
 
   useEffect(() => {
     if (mapReady && pendingLocateRef.current && userLocation && mapRef.current) {
@@ -588,7 +867,40 @@ export default function MapView({
           <RotateCcw aria-hidden="true" size={16} />
         </MapControlButton>
       </div>
+      <RouteBadge summary={routeSummary} />
       <MapLegend />
+    </div>
+  );
+}
+
+function RouteBadge({ summary }: { summary: RouteSummary | null }) {
+  if (!summary) {
+    return null;
+  }
+
+  const unavailable = summary.status === "unavailable";
+
+  return (
+    <div className="pointer-events-none absolute left-1/2 top-[7.25rem] z-[530] -translate-x-1/2 lg:top-4">
+      <div
+        className={cn(
+          "inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-semibold shadow-[0_12px_32px_rgba(0,0,0,0.38)] backdrop-blur-xl",
+          unavailable
+            ? "border-amber-300/20 bg-amber-950/72 text-amber-100"
+            : "border-cyan-300/20 bg-slate-950/82 text-cyan-100",
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-2 w-2 rounded-full",
+            summary.status === "loading" && "animate-pulse",
+            unavailable ? "bg-amber-300" : "bg-cyan-300",
+          )}
+        />
+        <span className="text-slate-400">{summary.detail}</span>
+        <span className="text-white">{summary.label}</span>
+      </div>
     </div>
   );
 }
