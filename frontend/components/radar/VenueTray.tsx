@@ -1,8 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
-import type { RefObject } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   Beer,
   Coffee,
@@ -35,15 +34,28 @@ export default function VenueTray({
   panelOpen = false,
   onSelectVenue,
 }: VenueTrayProps) {
-  const selectedCardRef = useRef<HTMLButtonElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollLeftRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    selectedCardRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
+  useLayoutEffect(() => {
+    const pendingScrollLeft = pendingScrollLeftRef.current;
+    const scroller = scrollerRef.current;
+
+    if (pendingScrollLeft === null || !scroller) {
+      return;
+    }
+
+    scroller.scrollLeft = pendingScrollLeft;
+    window.requestAnimationFrame(() => {
+      scroller.scrollLeft = pendingScrollLeft;
+      pendingScrollLeftRef.current = null;
     });
-  }, [selectedVenueId]);
+  }, [panelOpen, selectedVenueId, venues]);
+
+  function selectFromTray(venue: Venue) {
+    pendingScrollLeftRef.current = scrollerRef.current?.scrollLeft ?? null;
+    onSelectVenue(venue);
+  }
 
   return (
     <section
@@ -56,6 +68,7 @@ export default function VenueTray({
     >
       <div className="venue-tray-panel pointer-events-auto bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/80 to-transparent pt-6 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-[#0d0d1a]/72 lg:bg-none lg:pt-2 lg:shadow-[0_18px_54px_rgba(0,0,0,0.45)] lg:backdrop-blur-2xl">
         <div
+          ref={scrollerRef}
           className="scrollbar-none flex gap-2 overflow-x-auto px-3 pt-1 lg:px-3"
           style={{ scrollSnapType: "x mandatory" }}
         >
@@ -65,8 +78,7 @@ export default function VenueTray({
               venue={venue}
               index={index}
               selected={venue.id === selectedVenueId}
-              cardRef={venue.id === selectedVenueId ? selectedCardRef : undefined}
-              onSelect={() => onSelectVenue(venue)}
+              onSelect={() => selectFromTray(venue)}
             />
           ))}
         </div>
@@ -79,13 +91,11 @@ function VenueTrayCard({
   venue,
   index,
   selected,
-  cardRef,
   onSelect,
 }: {
   venue: Venue;
   index: number;
   selected: boolean;
-  cardRef?: RefObject<HTMLButtonElement | null>;
   onSelect: () => void;
 }) {
   const signal = crowdSignal(venue.crowdPercent);
@@ -94,7 +104,6 @@ function VenueTrayCard({
   return (
     <motion.button
       layout
-      ref={cardRef}
       type="button"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}

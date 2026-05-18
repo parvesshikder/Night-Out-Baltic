@@ -62,6 +62,7 @@ export default function Home() {
   const [selectedVenueId, setSelectedVenueId] = useState<string | undefined>(
     initialVenues[0]?.id,
   );
+  const selectedVenueIdRef = useRef(selectedVenueId);
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [chromeTarget, setChromeTarget] = useState<AppChromeTarget>("radar");
   const [activeEvent, setActiveEvent] = useState<EventItem | null>(null);
@@ -73,6 +74,10 @@ export default function Home() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const demoLedgerRef = useRef<DemoLedger>({});
+
+  useEffect(() => {
+    selectedVenueIdRef.current = selectedVenueId;
+  }, [selectedVenueId]);
 
   const refresh = useCallback(async () => {
     let nextVenues: Venue[];
@@ -105,18 +110,20 @@ export default function Home() {
     setEvents(nextEvents);
     setHeatPoints(nextHeat);
 
-    if (!selectedVenueId && nextVenues.length > 0) {
+    const currentSelectedVenueId = selectedVenueIdRef.current;
+
+    if (!currentSelectedVenueId && nextVenues.length > 0) {
       setSelectedVenueId(nextVenues[0].id);
     }
 
     if (
-      selectedVenueId &&
-      !nextVenues.some((venue) => venue.id === selectedVenueId)
+      currentSelectedVenueId &&
+      !nextVenues.some((venue) => venue.id === currentSelectedVenueId)
     ) {
       setSelectedVenueId(nextVenues[0]?.id);
     }
 
-  }, [area, query, selectedVenueId, timeframe, vibe]);
+  }, [area, query, timeframe, vibe]);
 
   useEffect(() => {
     refresh();
