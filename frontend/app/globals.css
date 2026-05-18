@@ -179,6 +179,7 @@
   .vmap-shell {
     background: transparent;
     border: 0;
+    overflow: visible;
   }
 
   .user-location-shell {
@@ -245,34 +246,47 @@
   }
 
   .vmap {
+    --pin-size: 46px;
+    --marker-w: 70px;
+    --marker-h: 84px;
+    --kind-tint: rgba(255, 255, 255, 0.16);
     position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: grid;
+    width: var(--marker-w);
+    height: var(--marker-h);
+    justify-items: center;
+    align-content: start;
     gap: 4px;
-    width: 60px;
-    height: 72px;
     border: 0;
+    padding: 0;
+    appearance: none;
     background: transparent;
+    color: inherit;
     cursor: pointer;
+    font: inherit;
+    overflow: visible;
+    text-align: center;
     transform: translateZ(0);
     transition: transform 180ms ease, filter 180ms ease;
   }
 
-  .vmap:hover  { transform: scale(1.12) translateZ(0); }
+  .vmap:hover {
+    transform: scale(1.1) translateZ(0);
+    filter: brightness(1.08);
+  }
+
   .vmap:focus-visible {
     outline: 2px solid rgba(34,211,238,0.9);
     outline-offset: 4px;
     border-radius: 999px;
   }
 
-  /* Outer pulse ring — animates continuously */
   .vmap__pulse {
     position: absolute;
-    top: 50%;
+    top: 32px;
     left: 50%;
-    width: 54px;
-    height: 54px;
+    width: 58px;
+    height: 58px;
     border-radius: 999px;
     background: var(--mc);
     opacity: 0;
@@ -280,57 +294,94 @@
     animation: vmap-pulse 2.2s ease-out infinite;
   }
 
-  /* Static aura ring — always visible, no animation */
-  .vmap__aura {
+  .vmap__shadow {
     position: absolute;
-    top: 50%;
     left: 50%;
-    width: 40px;
-    height: 40px;
+    top: 61px;
+    width: 30px;
+    height: 9px;
     border-radius: 999px;
-    background: var(--mc);
-    opacity: 0.22;
-    transform: translate(-50%, -50%);
-    filter: blur(6px);
+    background: rgba(0, 0, 0, 0.5);
+    filter: blur(4px);
+    transform: translateX(-50%);
   }
 
-  /* Core circle — the main clickable orb */
-  .vmap__core {
+  .vmap__pin {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: var(--pin-size);
+    height: var(--pin-size);
+    margin-top: 7px;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.58);
+    border-radius: 50% 50% 50% 12px;
+    background:
+      radial-gradient(circle at 38% 26%, rgba(255, 255, 255, 0.54), transparent 24%),
+      linear-gradient(135deg, var(--kind-tint), transparent 38%),
+      var(--mc-grad);
+    color: #fff;
+    box-shadow:
+      0 0 0 5px rgba(15, 23, 42, 0.2),
+      0 0 22px var(--mc-glow),
+      0 12px 26px rgba(0, 0, 0, 0.46);
+    transform: rotate(-45deg);
+  }
+
+  .vmap__pin::after {
+    position: absolute;
+    inset: 5px;
+    content: "";
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+  }
+
+  .vmap__shine {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    width: 16px;
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.78), transparent);
+    opacity: 0.56;
+    transform: rotate(28deg);
+  }
+
+  .vmap__glyph {
     position: relative;
     z-index: 1;
     display: grid;
+    width: 31px;
+    height: 31px;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    border: 0;
     border-radius: 999px;
-    background: var(--mc-grad);
-    box-shadow:
-      0 0 0 2px rgba(255,255,255,0.25),
-      0 0 16px var(--mc-glow),
-      0 4px 12px rgba(0,0,0,0.5);
-    margin-top: 12px; /* pushes core below the pulse ring center */
+    background: transparent;
+    box-shadow: none;
+    transform: rotate(45deg);
   }
 
-  /* Crowd percentage number inside the core */
-  .vmap__pct {
-    font-size: 9px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: -0.02em;
-    line-height: 1;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  .vmap__glyph svg {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2.25;
+    filter: drop-shadow(0 1px 2px rgba(2, 6, 23, 0.45));
   }
 
-  /* Venue name pill — hidden by default, shown on selected */
   .vmap__name {
     position: relative;
     z-index: 1;
-    max-width: 72px;
+    max-width: 82px;
     overflow: hidden;
     padding: 2px 7px;
     border: 1px solid rgba(255,255,255,0.15);
     border-radius: 999px;
-    background: rgba(9,9,22,0.90);
+    background: rgba(9, 9, 22, 0.9);
     color: #fff;
     font-size: 10px;
     font-weight: 700;
@@ -342,44 +393,54 @@
     transition: opacity 180ms ease, transform 180ms ease;
   }
 
-  /* Selected state — bigger, brighter, name visible */
+  .vmap:hover .vmap__name,
+  .vmap:focus-visible .vmap__name {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   .vmap--selected {
-    width: 76px;
-    height: 88px;
+    --pin-size: 54px;
+    --marker-w: 82px;
+    --marker-h: 96px;
   }
 
-  .vmap--selected .vmap__core {
-    width: 38px;
-    height: 38px;
+  .vmap--selected .vmap__pin {
+    border-color: rgba(255, 255, 255, 0.72);
     box-shadow:
-      0 0 0 3px rgba(255,255,255,0.35),
-      0 0 28px var(--mc-glow),
-      0 0 48px var(--mc-glow),
-      0 6px 20px rgba(0,0,0,0.6);
+      0 0 0 6px rgba(255, 255, 255, 0.08),
+      0 0 32px var(--mc-glow),
+      0 0 56px var(--mc-glow),
+      0 16px 34px rgba(0, 0, 0, 0.58);
   }
 
-  .vmap--selected .vmap__pct {
-    font-size: 11px;
+  .vmap--selected .vmap__glyph {
+    width: 37px;
+    height: 37px;
   }
 
-  .vmap--selected .vmap__aura {
-    width: 52px;
-    height: 52px;
-    opacity: 0.30;
+  .vmap--selected .vmap__glyph svg {
+    width: 22px;
+    height: 22px;
   }
 
   .vmap--selected .vmap__pulse {
-    width: 68px;
-    height: 68px;
+    top: 36px;
+    width: 72px;
+    height: 72px;
     animation-duration: 1.6s;
+  }
+
+  .vmap--selected .vmap__shadow {
+    top: 70px;
+    width: 38px;
+    height: 11px;
   }
 
   .vmap--selected .vmap__name {
     opacity: 1;
     transform: translateY(0);
   }
-
-  /* ─── Vibe colour variables ─── */
 
   .vmap--dead {
     --mc: #6b7280;
@@ -413,9 +474,16 @@
     --mc-glow: rgba(244,63,94,0.65);
   }
   .vmap--packed .vmap__pulse { animation-duration: 1.4s; }
-  .vmap--packed .vmap__aura { opacity: 0.32; }
 
-  /* ─── Keyframes ─── */
+  .vmap--kind-bar { --kind-tint: rgba(236, 72, 153, 0.26); }
+  .vmap--kind-pub { --kind-tint: rgba(245, 158, 11, 0.26); }
+  .vmap--kind-food { --kind-tint: rgba(34, 197, 94, 0.24); }
+  .vmap--kind-club { --kind-tint: rgba(168, 85, 247, 0.28); }
+  .vmap--kind-music { --kind-tint: rgba(14, 165, 233, 0.26); }
+  .vmap--kind-wine { --kind-tint: rgba(244, 63, 94, 0.26); }
+  .vmap--kind-cafe { --kind-tint: rgba(20, 184, 166, 0.24); }
+  .vmap--kind-terrace { --kind-tint: rgba(132, 204, 22, 0.24); }
+  .vmap--kind-place { --kind-tint: rgba(148, 163, 184, 0.22); }
 
   @keyframes vmap-pulse {
     0%   { transform: translate(-50%,-50%) scale(0.55); opacity: 0.55; }
@@ -423,16 +491,29 @@
     100% { transform: translate(-50%,-50%) scale(1.45); opacity: 0; }
   }
 
-  /* ─── Mobile: slightly smaller markers ─── */
   @media (max-width: 639px) {
-    .vmap          { width: 48px; height: 60px; }
-    .vmap__core    { width: 24px; height: 24px; margin-top: 10px; }
-    .vmap__pct     { font-size: 8px; }
-    .vmap__pulse   { width: 42px; height: 42px; }
-    .vmap__aura    { width: 32px; height: 32px; }
-    .vmap__name    { font-size: 9px; max-width: 60px; }
-    .vmap--selected .vmap__core { width: 30px; height: 30px; }
-    .vmap--selected .vmap__pulse { width: 52px; height: 52px; }
+    .vmap {
+      --pin-size: 38px;
+      --marker-w: 58px;
+      --marker-h: 72px;
+    }
+
+    .vmap__pin { margin-top: 8px; }
+    .vmap__glyph { width: 26px; height: 26px; }
+    .vmap__glyph svg { width: 16px; height: 16px; }
+    .vmap__pulse { top: 29px; width: 46px; height: 46px; }
+    .vmap__shadow { top: 55px; width: 24px; height: 7px; }
+    .vmap__name { max-width: 68px; font-size: 9px; }
+
+    .vmap--selected {
+      --pin-size: 44px;
+      --marker-w: 66px;
+      --marker-h: 82px;
+    }
+
+    .vmap--selected .vmap__glyph { width: 30px; height: 30px; }
+    .vmap--selected .vmap__pulse { top: 32px; width: 58px; height: 58px; }
+    .vmap--selected .vmap__shadow { top: 61px; width: 30px; }
   }
 
   @keyframes marker-pulse {

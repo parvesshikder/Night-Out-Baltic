@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { RotateCcw, UserRound } from "lucide-react";
-import type { LayerGroup, Map, Marker } from "leaflet";
+import type { LayerGroup, Map as LeafletMap, Marker } from "leaflet";
 import type { HeatPoint, Venue } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +19,28 @@ type MapViewProps = {
 };
 
 const TARTU_CENTER: [number, number] = [58.3776, 26.729];
+type VenueMarkerKind =
+  | "bar"
+  | "pub"
+  | "food"
+  | "club"
+  | "music"
+  | "wine"
+  | "cafe"
+  | "terrace"
+  | "place";
+
+const markerIcons: Record<VenueMarkerKind, string> = {
+  bar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10l-5 7-5-7Z"/><path d="M12 11v7"/><path d="M8 20h8"/></svg>',
+  pub: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h11v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M8 8V5"/><path d="M12 8V5"/></svg>',
+  food: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18"/><path d="M4 3v5a3 3 0 0 0 6 0V3"/><path d="M16 3v18"/><path d="M16 3c3 1 4 4 4 7v2h-4"/></svg>',
+  club: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg>',
+  music: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>',
+  wine: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v5a4 4 0 0 1-8 0V3Z"/><path d="M12 12v8"/><path d="M8 21h8"/></svg>',
+  cafe: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Z"/><path d="M16 10h2a3 3 0 0 1 0 6h-2"/><path d="M6 4h8"/></svg>',
+  terrace: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10a9 9 0 0 1 18 0H3Z"/><path d="M12 10v11"/><path d="M8 21h8"/><path d="M7 10c1-4 3-6 5-6s4 2 5 6"/></svg>',
+  place: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-5 7-11a7 7 0 1 0-14 0c0 6 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+};
 
 async function loadLeaflet() {
   const module = await import("leaflet");
@@ -41,21 +63,90 @@ function escapeHTML(value: string) {
     .replaceAll("'", "&#039;");
 }
 
+function venueMarkerKind(venue: Venue): { kind: VenueMarkerKind; label: string } {
+  const haystack = [
+    venue.name,
+    venue.kind,
+    venue.area,
+    ...venue.tags,
+    ...venue.music,
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (haystack.includes("nightclub") || haystack.includes("club")) {
+    return { kind: "club", label: "Club" };
+  }
+  if (haystack.includes("music") || haystack.includes("culture")) {
+    return { kind: "music", label: "Music venue" };
+  }
+  if (haystack.includes("wine")) {
+    return { kind: "wine", label: "Wine bar" };
+  }
+  if (haystack.includes("cafe") || haystack.includes("coffee")) {
+    return { kind: "cafe", label: "Cafe bar" };
+  }
+  if (haystack.includes("pub") || haystack.includes("beer")) {
+    return { kind: "pub", label: "Pub" };
+  }
+  if (
+    haystack.includes("restaurant") ||
+    haystack.includes("food") ||
+    haystack.includes("dining")
+  ) {
+    return { kind: "food", label: "Food" };
+  }
+  if (
+    haystack.includes("cocktail") ||
+    haystack.includes("shot") ||
+    haystack.includes("bar")
+  ) {
+    return { kind: "bar", label: "Bar" };
+  }
+  if (
+    haystack.includes("terrace") ||
+    haystack.includes("yard") ||
+    haystack.includes("garden") ||
+    haystack.includes("social area")
+  ) {
+    return { kind: "terrace", label: "Social area" };
+  }
+
+  return { kind: "place", label: "Venue" };
+}
+
+function dominantVenueCluster(venues: Venue[]) {
+  if (venues.length <= 1) {
+    return venues;
+  }
+
+  const groups = venues.reduce<Map<string, Venue[]>>((acc, venue) => {
+    const key = venue.area || "Tartu";
+    acc.set(key, [...(acc.get(key) ?? []), venue]);
+    return acc;
+  }, new Map());
+
+  return [...groups.values()].sort((a, b) => b.length - a.length)[0] ?? venues;
+}
+
 function markerHTML(venue: Venue, selected: boolean) {
-  const pct = Math.round(venue.crowdPercent);
+  const meta = venueMarkerKind(venue);
   const vibeClass = `vmap--${venue.vibe}`;
+  const kindClass = `vmap--kind-${meta.kind}`;
   const selectedClass = selected ? " vmap--selected" : "";
   const name = escapeHTML(venue.name);
+  const label = escapeHTML(meta.label);
 
   return `
     <button
-      class="vmap ${vibeClass}${selectedClass}"
-      aria-label="${name} · ${escapeHTML(venue.vibeLabel)} · ${pct}% crowd"
+      class="vmap ${vibeClass} ${kindClass}${selectedClass}"
+      aria-label="${name} · ${label} · ${escapeHTML(venue.vibeLabel)}"
     >
       <span class="vmap__pulse" aria-hidden="true"></span>
-      <span class="vmap__aura" aria-hidden="true"></span>
-      <span class="vmap__core" aria-hidden="true">
-        <span class="vmap__pct">${pct}%</span>
+      <span class="vmap__shadow" aria-hidden="true"></span>
+      <span class="vmap__pin" aria-hidden="true">
+        <span class="vmap__shine"></span>
+        <span class="vmap__glyph">${markerIcons[meta.kind]}</span>
       </span>
       <span class="vmap__name">${name}</span>
     </button>
@@ -88,14 +179,16 @@ export default function MapView({
   onSelectVenue,
 }: MapViewProps) {
   const mapEl = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
   const heatRef = useRef<LayerGroup | null>(null);
   const locationLayerRef = useRef<LayerGroup | null>(null);
   const pendingLocateRef = useRef(false);
   const onSelectRef = useRef(onSelectVenue);
+  const selectedVenueIdRef = useRef(selectedVenueId);
   const selectedVenue = venues.find((venue) => venue.id === selectedVenueId);
 
+  const [mapReady, setMapReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -159,13 +252,19 @@ export default function MapView({
       ).addTo(map);
 
       mapRef.current = map;
-      requestAnimationFrame(() => map.invalidateSize());
+      requestAnimationFrame(() => {
+        map.invalidateSize();
+        if (!cancelled) {
+          setMapReady(true);
+        }
+      });
     }
 
     initMap();
 
     return () => {
       cancelled = true;
+      setMapReady(false);
       mapRef.current?.remove();
       mapRef.current = null;
     };
@@ -206,7 +305,7 @@ export default function MapView({
 
     async function paint() {
       const map = mapRef.current;
-      if (!map) {
+      if (!mapReady || !map) {
         return;
       }
 
@@ -223,11 +322,12 @@ export default function MapView({
 
       for (const venue of venues) {
         const selected = venue.id === selectedVenueId;
+        const meta = venueMarkerKind(venue);
         const icon = L.divIcon({
           html: markerHTML(venue, selected),
           className: "vmap-shell",
-          iconSize: selected ? [76, 88] : [60, 72],
-          iconAnchor: selected ? [38, 56] : [30, 48],
+          iconSize: selected ? [82, 96] : [70, 84],
+          iconAnchor: selected ? [41, 70] : [35, 62],
         });
         const marker = L.marker([venue.lat, venue.lng], {
           icon,
@@ -236,7 +336,7 @@ export default function MapView({
         })
           .addTo(map)
           .on("click", () => onSelectRef.current(venue));
-        marker.bindTooltip(`${venue.name} · ${venue.vibeLabel}`, {
+        marker.bindTooltip(`${venue.name} · ${meta.label} · ${venue.vibeLabel}`, {
           direction: "top",
           offset: [0, -22],
           opacity: 0.92,
@@ -285,11 +385,60 @@ export default function MapView({
     return () => {
       cancelled = true;
     };
-  }, [venues, heatPoints, selectedVenueId, showHeat]);
+  }, [venues, heatPoints, selectedVenueId, showHeat, mapReady]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function frameMobileVenueCluster() {
+      const map = mapRef.current;
+      if (!mapReady || !isMobile || !map || venues.length === 0) {
+        return;
+      }
+
+      const L = await loadLeaflet();
+      if (cancelled) {
+        return;
+      }
+
+      const cluster = dominantVenueCluster(venues);
+
+      if (cluster.length === 1) {
+        map.setView([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
+          animate: true,
+        });
+        return;
+      }
+
+      const bounds = L.latLngBounds(
+        cluster.map((venue) => [venue.lat, venue.lng] as [number, number]),
+      );
+
+      map.fitBounds(bounds, {
+        animate: true,
+        duration: 0.45,
+        maxZoom: 15,
+        paddingTopLeft: [44, 120],
+        paddingBottomRight: [44, 190],
+      });
+    }
+
+    frameMobileVenueCluster();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [venues, isMobile, mapReady]);
+
+  useEffect(() => {
+    const selectedChanged = selectedVenueIdRef.current !== selectedVenueId;
+    selectedVenueIdRef.current = selectedVenueId;
     const selected = venues.find((venue) => venue.id === selectedVenueId);
-    if (selected && mapRef.current) {
+    if (mapReady && selected && mapRef.current) {
+      if (isMobile && !selectedChanged) {
+        return;
+      }
+
       // Offset latitude on mobile so the marker is visible above the bottom panel
       const latOffset = isMobile ? 0.003 : 0;
       mapRef.current.flyTo([selected.lat - latOffset, selected.lng], 16, {
@@ -297,14 +446,14 @@ export default function MapView({
         duration: 0.65,
       });
     }
-  }, [selectedVenueId, venues, isMobile]);
+  }, [selectedVenueId, venues, isMobile, mapReady]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function paintLocation() {
       const map = mapRef.current;
-      if (!map) return;
+      if (!mapReady || !map) return;
 
       const L = await loadLeaflet();
       if (cancelled) return;
@@ -365,17 +514,17 @@ export default function MapView({
     return () => {
       cancelled = true;
     };
-  }, [selectedVenue, userLocation]);
+  }, [selectedVenue, userLocation, mapReady]);
 
   useEffect(() => {
-    if (pendingLocateRef.current && userLocation && mapRef.current) {
+    if (mapReady && pendingLocateRef.current && userLocation && mapRef.current) {
       pendingLocateRef.current = false;
       mapRef.current.flyTo([userLocation.lat, userLocation.lng], 16, {
         animate: true,
         duration: 0.65,
       });
     }
-  }, [userLocation]);
+  }, [userLocation, mapReady]);
 
   function findMe() {
     if (userLocation && mapRef.current) {
@@ -392,6 +541,30 @@ export default function MapView({
   }
 
   function resetMapView() {
+    if (isMobile && venues.length > 0) {
+      const cluster = dominantVenueCluster(venues);
+
+      if (cluster.length === 1) {
+        mapRef.current?.flyTo([cluster[0].lat - 0.0012, cluster[0].lng], 15, {
+          animate: true,
+          duration: 0.55,
+        });
+        return;
+      }
+
+      mapRef.current?.fitBounds(
+        cluster.map((venue) => [venue.lat, venue.lng] as [number, number]),
+        {
+          animate: true,
+          duration: 0.55,
+          maxZoom: 15,
+          paddingTopLeft: [44, 120],
+          paddingBottomRight: [44, 190],
+        },
+      );
+      return;
+    }
+
     const latOffset = isMobile ? 0.003 : 0;
     mapRef.current?.flyTo([TARTU_CENTER[0] - latOffset, TARTU_CENTER[1]], 14, {
       animate: true,

@@ -228,29 +228,31 @@ export default function VenueDetailPanel({
             role="dialog"
             aria-modal="false"
             aria-label={venue ? `${venue.name} details` : "Venue details"}
-            initial={{ y: 60, opacity: 0, scale: 0.97 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 60, opacity: 0, scale: 0.97 }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
-            className="fixed bottom-[126px] left-2 right-2 z-50 max-h-[60dvh] overflow-y-auto overscroll-contain rounded-2xl border border-white/[0.10] bg-[#0d0d1a]/97 text-slate-100 shadow-[0_-8px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl lg:hidden"
+            className="pointer-events-none fixed inset-0 z-50 grid place-items-center px-5 lg:hidden"
           >
-            {venue ? (
-              <MobilePanelContent
-                venue={venue}
-                activeEvent={activeEvent}
-                busyAction={busyAction}
-                onClose={onClose}
-                onContribution={onContribution}
-              />
-            ) : (
-              <>
-                <PanelCloseButton
+            <div className="pointer-events-auto relative max-h-[42dvh] w-full max-w-[20rem] overflow-y-auto overscroll-contain rounded-xl border border-white/[0.10] bg-[#0d0d1a]/97 text-slate-100 shadow-[0_18px_48px_rgba(0,0,0,0.62)] backdrop-blur-2xl">
+              {venue ? (
+                <MobilePanelContent
+                  venue={venue}
+                  activeEvent={activeEvent}
+                  busyAction={busyAction}
                   onClose={onClose}
-                  className="absolute right-3 top-3 z-20 flex"
+                  onContribution={onContribution}
                 />
-                <EmptyPanelState />
-              </>
-            )}
+              ) : (
+                <>
+                  <PanelCloseButton
+                    onClose={onClose}
+                    className="absolute right-3 top-3 z-20 flex"
+                  />
+                  <EmptyPanelState />
+                </>
+              )}
+            </div>
           </motion.aside>
         </>
       )}
@@ -497,16 +499,16 @@ function MobilePanelContent({
   const busy = busyAction?.startsWith(`${venue.id}-`) ?? false;
 
   return (
-    <div className="p-4">
+    <div className="p-3">
       {activeEvent && <EventBanner event={activeEvent} compact />}
 
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Badge variant={badgeVariant(signal.level)}>{signal.level}</Badge>
-          <h2 className="mt-1.5 truncate text-base font-bold text-white">
+          <h2 className="mt-1 truncate text-sm font-bold text-white">
             {venue.name}
           </h2>
-          <p className="truncate text-xs text-slate-500">
+          <p className="truncate text-[11px] text-slate-500">
             {venue.area} · {venue.kind}
           </p>
         </div>
@@ -514,34 +516,34 @@ function MobilePanelContent({
           type="button"
           onClick={onClose}
           aria-label="Close venue details"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-slate-400 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-slate-400 transition hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
         >
-          <X aria-hidden="true" size={14} />
+          <X aria-hidden="true" size={13} />
         </button>
       </div>
 
-      <div className="mt-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs text-slate-500">Crowd signal</span>
-          <span className="font-mono text-xs font-semibold tabular-nums text-slate-300">
+      <div className="mt-2">
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-[11px] text-slate-500">Crowd signal</span>
+          <span className="font-mono text-[11px] font-semibold tabular-nums text-slate-300">
             {Math.round(venue.crowdPercent)}%
           </span>
         </div>
-        <SignalBars percent={venue.crowdPercent} vibe={venue.vibe} size="md" />
+        <SignalBars percent={venue.crowdPercent} vibe={venue.vibe} size="sm" />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
         <MiniStat label="Entry" value={signal.wait} />
         <MiniStat label="Music" value={venue.music[0] ?? "Mixed"} />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-1.5">
         <motion.button
           type="button"
           disabled={busy}
           whileTap={{ scale: 0.95 }}
           onClick={() => onContribution("going")}
-          className="h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-400 text-xs font-bold text-slate-950 transition hover:brightness-110 disabled:opacity-50"
+          className="h-8 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-400 text-[11px] font-bold text-slate-950 transition hover:brightness-110 disabled:opacity-50"
         >
           I&apos;m Going
         </motion.button>
@@ -550,13 +552,13 @@ function MobilePanelContent({
           disabled={busy}
           whileTap={{ scale: 0.95 }}
           onClick={() => onContribution("check_in")}
-          className="h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-400 text-xs font-bold text-slate-950 transition hover:brightness-110 disabled:opacity-50"
+          className="h-8 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-400 text-[11px] font-bold text-slate-950 transition hover:brightness-110 disabled:opacity-50"
         >
           Check In
         </motion.button>
       </div>
 
-      <p className="mt-3 truncate text-[11px] text-slate-600">
+      <p className="mt-2 truncate text-[10px] text-slate-600">
         {venue.price} · {venue.openHours}
       </p>
     </div>
@@ -697,9 +699,9 @@ function PanelCloseButton({
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] p-2.5">
-      <p className="truncate text-xs font-bold text-white">{value}</p>
-      <p className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-600">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5">
+      <p className="truncate text-[11px] font-bold text-white">{value}</p>
+      <p className="mt-0.5 text-[9px] font-bold uppercase tracking-widest text-slate-600">
         {label}
       </p>
     </div>

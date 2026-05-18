@@ -35,7 +35,7 @@ export default function AppChrome({
   onNavigate,
 }: AppChromeProps) {
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 h-11 border-b border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur-xl lg:h-14">
+    <header className="fixed left-0 right-0 top-0 z-50 h-14 border-b border-white/[0.06] bg-[#0d0d1a]/90 backdrop-blur-xl">
       <div className="mx-auto flex h-full max-w-[var(--content-max)] items-center justify-between gap-2 px-3 lg:px-6">
         <a
           href="#radar"

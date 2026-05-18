@@ -123,6 +123,13 @@ export default function Home() {
   }, [refresh]);
 
   useEffect(() => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setDetailPanelOpen(true);
+      setChromeTarget("venues");
+    }
+  }, []);
+
+  useEffect(() => {
     async function loadSuggestionPool() {
       try {
         const [nextVenues, nextEvents] = await Promise.all([
@@ -435,6 +442,7 @@ export default function Home() {
         venues={venues}
         selectedVenueId={selectedVenueId}
         cityMood={cityPulse.cityMood}
+        panelOpen={detailPanelOpen}
         onSelectVenue={selectVenue}
       />
 

@@ -24,6 +24,7 @@ type VenueTrayProps = {
   venues: Venue[];
   selectedVenueId?: string;
   cityMood: string;
+  panelOpen?: boolean;
   onSelectVenue: (venue: Venue) => void;
 };
 
@@ -31,6 +32,7 @@ export default function VenueTray({
   venues,
   selectedVenueId,
   cityMood,
+  panelOpen = false,
   onSelectVenue,
 }: VenueTrayProps) {
   const selectedCardRef = useRef<HTMLButtonElement | null>(null);
@@ -46,11 +48,15 @@ export default function VenueTray({
   return (
     <section
       aria-label="Live venues"
-      className="fixed bottom-0 left-0 right-0 z-40 pb-safe lg:hidden pointer-events-none"
+      className={cn(
+        "pointer-events-none fixed bottom-0 left-0 right-0 z-40 pb-safe",
+        "lg:bottom-4 lg:left-4 lg:pb-0",
+        panelOpen ? "lg:right-[416px]" : "lg:right-4",
+      )}
     >
-      <div className="bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/80 to-transparent pt-8 pointer-events-auto">
+      <div className="pointer-events-auto bg-gradient-to-t from-[#0d0d1a] via-[#0d0d1a]/80 to-transparent pt-8 lg:rounded-2xl lg:border lg:border-white/10 lg:bg-[#0d0d1a]/72 lg:bg-none lg:pt-3 lg:shadow-[0_18px_54px_rgba(0,0,0,0.45)] lg:backdrop-blur-2xl">
         <div
-          className="scrollbar-none flex gap-2 overflow-x-auto px-3 pb-3"
+          className="scrollbar-none flex gap-2 overflow-x-auto px-3 pb-3 lg:px-3"
           style={{ scrollSnapType: "x mandatory" }}
         >
           {venues.map((venue, index) => (
