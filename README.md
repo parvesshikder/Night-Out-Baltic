@@ -97,4 +97,5 @@ Example contribution body:
 }
 ```
 
-The venue list is intentionally seeded dummy data for MVP validation. The UI avoids exact headcounts and represents crowd as qualitative levels. For production, the next step would be replacing or enriching the seed data with OpenStreetMap/Overpass venue imports and owner-verified entries.
+To validate the Minimum Viable Product (MVP), the venue list is populated with sample data. The user interface displays crowd levels qualitatively rather than with precise numbers. For a production-ready version, the plan is to substitute or augment this sample data with venue information imported from OpenStreetMap/Overpass and through entries verified by owners.
+
